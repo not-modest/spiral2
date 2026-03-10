@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spiral · Prototype 2.4</title>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1117;--surf:#161b22;--surf2:#21262d;--surf3:#30363d;
+  --accent:#58a6ff;--green:#3fb950;--yellow:#d29922;--red:#f85149;
+  --purple:#bc8cff;--orange:#ffa657;
+  --text:#e6edf3;--muted:#8b949e;--border:rgba(240,246,252,0.1);
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+nav{display:flex;align-items:center;background:var(--surf);border-bottom:1px solid var(--border);flex-shrink:0;z-index:100}
+.brand{padding:0 1.25rem;font-size:1.05rem;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;white-space:nowrap}
+.nav-tabs{display:flex;flex:1}
+.nav-tab{padding:0.7rem 1.2rem;border:none;background:transparent;color:var(--muted);cursor:pointer;font-size:0.84rem;font-weight:500;border-bottom:2px solid transparent;transition:all .18s}
+.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.nav-tab:hover:not(.active){color:var(--text)}
+.nav-right{padding:0 1rem}
+.vbadge{background:var(--surf2);border:1px solid var(--border);border-radius:20px;padding:.2rem .7rem;font-size:.72rem;color:var(--muted)}
+.page{display:none;flex:1;overflow:hidden}
+.page.active{display:flex}
+
+/* SIM PAGE */
+.sim-layout{display:flex;width:100%;height:100%}
+.lpanel{width:310px;background:var(--surf);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0}
+.psec{padding:.85rem 1rem;border-bottom:1px solid var(--border)}
+.stitle{font-size:.69rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.55rem;font-weight:600}
+select{width:100%;background:var(--surf2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:.82rem;padding:.42rem .6rem;margin-bottom:.45rem;cursor:pointer}
+.row{display:flex;align-items:center;gap:.5rem;margin-bottom:.42rem}
+.row label{font-size:.79rem;color:var(--muted);flex:1}
+.rval{font-size:.79rem;font-family:monospace;color:var(--accent);min-width:46px;text-align:right}
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;background:var(--surf3);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--accent);cursor:pointer}
+.gr{display:flex;align-items:center;gap:.5rem;padding:.34rem 0}
+.glbl{font-size:.75rem;color:var(--muted);min-width:125px}
+.gtrack{flex:1;height:7px;background:var(--surf3);border-radius:4px;overflow:hidden}
+.gbar{height:100%;border-radius:4px;transition:width .35s,background .35s;min-width:2px}
+.ghi{background:linear-gradient(90deg,#1a7f37,#3fb950)}
+.gmid{background:linear-gradient(90deg,#9e6a03,#d29922)}
+.glo{background:linear-gradient(90deg,#8d1f1f,#f85149)}
+.gpct{font-size:.75rem;font-family:monospace;font-weight:700;min-width:34px;text-align:right}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem}
+.scard{background:var(--surf2);border:1px solid var(--border);border-radius:8px;padding:.6rem .7rem;text-align:center}
+.sval{font-size:1.25rem;font-weight:800;line-height:1.1}
+.slbl{font-size:.65rem;color:var(--muted);margin-top:.2rem;text-transform:uppercase;letter-spacing:.04em}
+.pills{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.35rem}
+.pill{background:var(--surf2);border:1px solid var(--border);border-radius:12px;padding:.18rem .5rem;font-size:.73rem;font-family:monospace}
+.pill b{color:var(--muted);font-weight:500}
+.pill span{color:var(--accent)}
+.cyc-nav{display:flex;align-items:center;gap:.45rem;margin-bottom:.5rem}
+.cyc-nav label{font-size:.75rem;color:var(--muted);white-space:nowrap}
+.cbadge{background:var(--surf2);border:1px solid var(--border);border-radius:6px;padding:.14rem .48rem;font-size:.73rem;font-family:monospace;color:var(--accent);white-space:nowrap}
+.btn{width:100%;padding:.58rem;border:none;border-radius:7px;font-weight:600;font-size:.84rem;cursor:pointer;transition:all .18s;margin-bottom:.38rem}
+.bprimary{background:linear-gradient(135deg,#1f6feb,#388bfd);color:#fff}
+.bprimary:hover{opacity:.88;transform:translateY(-1px)}
+.bsuccess{background:linear-gradient(135deg,#1a7f37,#3fb950);color:#fff}
+.bghost{background:var(--surf2);color:var(--text);border:1px solid var(--border)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+.progwrap{height:3px;background:var(--surf3);border-radius:2px;overflow:hidden;margin-bottom:.45rem;display:none}
+.progbar{height:100%;background:var(--accent);border-radius:2px;transition:width .08s}
+
+/* RIGHT */
+.rpanel{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.cbar{display:flex;align-items:center;gap:.65rem;padding:.4rem 1rem;background:var(--surf);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+.cbar-lbl{font-size:.73rem;color:var(--muted);white-space:nowrap}
+.ctrack{width:80px;height:7px;background:var(--surf3);border-radius:4px;overflow:hidden}
+.cfill{height:100%;border-radius:4px;transition:width .4s,background .4s}
+.cval{font-size:.73rem;font-family:monospace;min-width:36px}
+.pheader{display:flex;align-items:center;justify-content:space-between;padding:.45rem 1rem;border-bottom:1px solid var(--border);background:var(--surf);flex-shrink:0}
+.ptitle{font-size:.8rem;color:var(--muted)}
+.pctls{display:flex;gap:.4rem}
+.ibtn{background:var(--surf2);border:1px solid var(--border);border-radius:6px;padding:.22rem .55rem;font-size:.74rem;color:var(--muted);cursor:pointer;transition:all .15s}
+.ibtn:hover{color:var(--text);border-color:var(--accent)}
+#plot{flex:1;min-height:0}
+.spinner-ov{position:absolute;inset:0;background:rgba(13,17,23,.65);display:none;align-items:center;justify-content:center;z-index:50;flex-direction:column;gap:.7rem}
+.spinner-ov.show{display:flex}
+.spin{width:38px;height:38px;border:3px solid var(--surf3);border-top-color:var(--accent);border-radius:50%;animation:spin .75s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinlbl{font-size:.79rem;color:var(--muted)}
+
+/* SETTINGS */
+.setpage{overflow-y:auto;padding:1.5rem;background:var(--bg);width:100%}
+.setgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem;max-width:1200px;margin:0 auto}
+.setcard{background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:1rem 1.1rem}
+.setcard h3{font-size:.78rem;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin-bottom:.8rem;font-weight:700}
+.mb{margin-bottom:.8rem}
+
+/* DOCS */
+.docspage{overflow-y:auto;background:var(--bg);width:100%;padding:2rem}
+.docsin{max-width:860px;margin:0 auto}
+.docsin h2{font-size:1.05rem;color:var(--accent);margin:1.6rem 0 .5rem;border-bottom:1px solid var(--border);padding-bottom:.35rem}
+.docsin h3{font-size:.88rem;color:var(--text);margin:1rem 0 .35rem}
+.docsin p{font-size:.82rem;color:var(--muted);line-height:1.7;margin-bottom:.6rem}
+.docsin ul{font-size:.82rem;color:var(--muted);padding-left:1.2rem;line-height:1.8;margin-bottom:.6rem}
+.eq{background:var(--surf);border-left:3px solid var(--accent);padding:.6rem .9rem;border-radius:0 7px 7px 0;margin:.7rem 0;font-family:monospace;font-size:.79rem;line-height:1.85;color:var(--text)}
+.eq .c{color:var(--muted);font-style:italic}
+.dtbl{width:100%;border-collapse:collapse;font-size:.79rem;margin:.7rem 0}
+.dtbl th{background:var(--surf2);padding:.42rem .6rem;text-align:left;color:var(--accent);font-weight:600;border-bottom:1px solid var(--border)}
+.dtbl td{padding:.4rem .6rem;border-bottom:1px solid rgba(240,246,252,0.05);color:var(--muted)}
+.dtbl td:first-child{color:var(--text)}
+
+/* TOOLTIP */
+.tipbox{position:fixed;background:#1c2128;border:1px solid var(--border);border-radius:7px;padding:.45rem .7rem;font-size:.74rem;color:var(--muted);max-width:250px;pointer-events:none;z-index:9999;opacity:0;transition:opacity .15s;line-height:1.5}
+.tipbox.show{opacity:1}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-thumb{background:var(--surf3);border-radius:3px}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="brand">⬡ Spiral</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" data-page="sim">Simulation</button>
+    <button class="nav-tab" data-page="settings">Settings / Editors</button>
+    <button class="nav-tab" data-page="docs">Documentation</button>
+  </div>
+  <div class="nav-right"><span class="vbadge">Prototype 2.4</span></div>
+</nav>
+
+<!-- ═══════════════ SIMULATION PAGE ═══════════════ -->
+<div class="page active" id="page-sim">
+<div class="sim-layout">
+<div class="lpanel">
+
+  <div class="psec">
+    <div class="stitle">Polymer &amp; Technology</div>
+    <select id="polySel">
+      <option value="hdpe">HDPE – High-Density Polyethylene</option>
+      <option value="pet" selected>PET – Polyethylene Terephthalate</option>
+      <option value="pp">PP – Polypropylene</option>
+      <option value="pla">PLA – Polylactic Acid</option>
+      <option value="ldpe">LDPE – Low-Density Polyethylene</option>
+    </select>
+    <select id="techSel" style="border-color:var(--accent); background:rgba(88,166,255,0.05)">
+      <option value="greedy">✨ Greedy Auto-Selector</option>
+      <option value="mechanical">Mechanical Recycling</option>
+      <option value="solvent">Solvent Dissolution</option>
+      <option value="chemical">Chemical / Depolymerisation</option>
+      <option value="compatibilizer">Compatibilisation</option>
+      <option value="stabilizer">Thermal Stabilisation</option>
+    </select>
+    <select id="appSel">
+      <option value="packaging">Application: Food Packaging</option>
+      <option value="pipe">Application: Pressure Pipe</option>
+      <option value="structural">Application: Structural Part</option>
+      <option value="fiber">Application: Textile Fibre</option>
+    </select>
+  </div>
+
+  <div class="psec">
+    <div class="stitle">Internal Material State</div>
+    <div class="pills">
+      <div class="pill"><b>m̄ </b><span id="pill-m">1.000</span></div>
+      <div class="pill"><b>Xc </b><span id="pill-xc">—</span></div>
+      <div class="pill"><b>Ci </b><span id="pill-ci">0.020</span></div>
+      <div class="pill"><b>π </b><span id="pill-pi">0.980</span></div>
+      <div class="pill"><b>λ </b><span id="pill-lam">0.000</span></div>
+    </div>
+  </div>
+
+  <div class="psec">
+    <div class="stitle">Material Properties</div>
+    <div class="cyc-nav">
+      <label>Cycle:</label>
+      <input type="range" id="cycScrub" min="0" max="0" value="0" style="flex:1">
+      <span class="cbadge" id="cycBadge">0 · use</span>
+    </div>
+    <div id="gauges">
+      <div class="gr"><span class="glbl" data-tip="Flory: σ ∝ √Mw·(1+k·ΔXc)·(1−Ci)^γ">Tensile Strength</span><div class="gtrack"><div class="gbar ghi" id="g-tensile" style="width:100%"></div></div><span class="gpct" id="p-tensile">100%</span></div>
+      <div class="gr"><span class="glbl" data-tip="Reptation: ε_b ∝ Mw^1.5·amorph_frac·(1−Ci)">Elongation at Break</span><div class="gtrack"><div class="gbar ghi" id="g-elong" style="width:100%"></div></div><span class="gpct" id="p-elong">100%</span></div>
+      <div class="gr"><span class="glbl" data-tip="Two-phase ROM. NON-MONOTONIC: rises with Xc then drops from crack damage">Elastic Modulus</span><div class="gtrack"><div class="gbar ghi" id="g-modulus" style="width:100%"></div></div><span class="gpct" id="p-modulus">100%</span></div>
+      <div class="gr"><span class="glbl" data-tip="Ductile-brittle: needs high Mw AND low Xc simultaneously">Impact Resistance</span><div class="gtrack"><div class="gbar ghi" id="g-impact" style="width:100%"></div></div><span class="gpct" id="p-impact">100%</span></div>
+      <div class="gr"><span class="glbl" data-tip="η₀∝Mw^3.4 → MFR∝Mw^–3.4. Steepest drop of all properties">MFR Processability</span><div class="gtrack"><div class="gbar ghi" id="g-mfr" style="width:100%"></div></div><span class="gpct" id="p-mfr">100%</span></div>
+      <div class="gr"><span class="glbl" data-tip="Surface hardness ∝ √(Xc/Xc₀) with chain degradation penalty">Hardness</span><div class="gtrack"><div class="gbar ghi" id="g-hardness" style="width:100%"></div></div><span class="gpct" id="p-hardness">100%</span></div>
+      <div class="gr"><span class="glbl" data-tip="Elastic modulus + interfacial adhesion penalty from contamination">Flexural Modulus</span><div class="gtrack"><div class="gbar ghi" id="g-flexural" style="width:100%"></div></div><span class="gpct" id="p-flexural">100%</span></div>
+      <div class="gr"><span class="glbl" data-tip="Entanglement density ∝ Mw^1.5. Short chains creep badly">Creep Resistance</span><div class="gtrack"><div class="gbar ghi" id="g-creep" style="width:100%"></div></div><span class="gpct" id="p-creep">100%</span></div>
+    </div>
+  </div>
+
+  <div class="psec">
+    <div class="stitle">Simulation Results</div>
+    <div class="sgrid">
+      <div class="scard"><div class="sval" id="s-hl" style="color:var(--accent)">—</div><div class="slbl">Half-Life (cyc)</div></div>
+      <div class="scard"><div class="sval" id="s-sr" style="color:var(--green)">—</div><div class="slbl">Survival Rate</div></div>
+      <div class="scard"><div class="sval" id="s-q" style="color:var(--purple)">—</div><div class="slbl">Avg Final Q</div></div>
+      <div class="scard"><div class="sval" id="s-e" style="color:var(--yellow)">—</div><div class="slbl">Total E Burden</div></div>
+      <div class="scard"><div class="sval" id="s-c" style="color:var(--orange)">—</div><div class="slbl">Net Cost (USD/kg)</div></div>
+      <div class="scard"><div class="sval" id="s-ci" style="color:var(--red)">—</div><div class="slbl">Final Ci</div></div>
+    </div>
+  </div>
+
+  <div class="psec">
+    <div class="progwrap" id="progWrap"><div class="progbar" id="progBar" style="width:0%"></div></div>
+    <button class="btn bprimary" id="runBtn">▶  Run Simulation</button>
+    <button class="btn bsuccess" id="exportBtn">⬇  Export CSV</button>
+    <button class="btn bghost"   id="resetBtn">↺  Reset</button>
+  </div>
+
+</div><!-- /lpanel -->
+
+<div class="rpanel">
+  <div class="cbar">
+    <span class="cbar-lbl">Contamination (Ci)</span>
+    <div class="ctrack"><div class="cfill" id="ciFill" style="width:2%;background:var(--green)"></div></div>
+    <span class="cval" id="ciVal" style="color:var(--green)">2.0%</span>
+    <span class="cbar-lbl" style="margin-left:.75rem">Purity (π)</span>
+    <div class="ctrack"><div class="cfill" id="piFill" style="width:98%;background:var(--green)"></div></div>
+    <span class="cval" id="piVal" style="color:var(--green)">98.0%</span>
+    <span class="cbar-lbl" style="margin-left:.75rem">Virgin blend (λ)</span>
+    <div class="ctrack"><div class="cfill" id="lamFill" style="width:0%;background:var(--purple)"></div></div>
+    <span class="cval" id="lamVal" style="color:var(--purple)">0.0%</span>
+    <span style="margin-left:auto;display:flex;align-items:center;gap:.35rem;font-size:.71rem;color:var(--muted)">
+      <span style="width:10px;height:10px;border-radius:50%;background:var(--accent);display:inline-block"></span>In Zone
+      <span style="width:10px;height:10px;border-radius:50%;background:var(--red);display:inline-block;margin-left:.5rem"></span>Failed
+    </span>
+  </div>
+  <div class="pheader">
+    <span class="ptitle" id="plotTitle">3D Circularity State-Space</span>
+    <div class="pctls">
+      <button class="ibtn" id="btn2d">Q/cycle</button>
+      <button class="ibtn" id="btnCam">⟳ Reset</button>
+    </div>
+  </div>
+  <div id="plot" style="flex:1;min-height:0"></div>
+  <div class="spinner-ov" id="spinOv"><div class="spin"></div><span class="spinlbl" id="spinLbl">Running…</span></div>
+</div>
+
+</div>
+</div><!-- /page-sim -->
+
+<!-- ═══════════════ SETTINGS PAGE ═══════════════ -->
+<div class="page" id="page-settings">
+<div class="setpage">
+<div class="setgrid">
+
+  <div class="setcard" style="border-color:var(--accent)">
+    <h3 style="color:var(--text)">🔬 Technology Editor</h3>
+    <p style="font-size:.7rem;color:var(--muted);margin-bottom:.8rem">Fine-tune the efficiency and cost parameters for each available recycling technology.</p>
+    <select id="ed-tech" class="mb">
+      <option value="mechanical">Mechanical Recycling</option>
+      <option value="solvent">Solvent Dissolution</option>
+      <option value="chemical">Chemical / Depolymerisation</option>
+      <option value="compatibilizer">Compatibilisation</option>
+      <option value="stabilizer">Thermal Stabilisation</option>
+    </select>
+    <div class="row"><label data-tip="Fraction of theoretical max quality restored. (0=none, 1=perfect)">Restoration eff (ρ)</label><input type="range" id="ed-rho" min="0" max="1" step="0.01"><span class="rval" id="ed-v-rho"></span></div>
+    <div class="row"><label data-tip="Fraction of contamination removed. (0=none, 1=100% pure)">Purification eff (φ)</label><input type="range" id="ed-phi" min="0" max="1" step="0.01"><span class="rval" id="ed-v-phi"></span></div>
+    <div class="row"><label data-tip="Inherent energy emissions for the process (kgCO2/kg)">Energy burden (ε)</label><input type="range" id="ed-eps" min="0.1" max="5" step="0.1"><span class="rval" id="ed-v-eps"></span></div>
+    <div class="row"><label data-tip="Base economic cost to run the process (USD/kg)">Economic cost (κ)</label><input type="range" id="ed-kap" min="0.1" max="5" step="0.1"><span class="rval" id="ed-v-kap"></span></div>
+  </div>
+
+  <div class="setcard" style="border-color:var(--purple)">
+    <h3 style="color:var(--text)">🧪 Polymer Editor</h3>
+    <p style="font-size:.7rem;color:var(--muted);margin-bottom:.8rem">Adjust inherent degradation rates for the selected base polymer material.</p>
+    <select id="ed-poly" class="mb">
+      <option value="hdpe">HDPE</option>
+      <option value="pet">PET</option>
+      <option value="pp">PP</option>
+      <option value="pla">PLA</option>
+      <option value="ldpe">LDPE</option>
+    </select>
+    <div class="row"><label data-tip="Rate of chain scission during the use phase (UV/thermal)">Use-phase scission (β_u)</label><input type="range" id="ed-bu" min="0" max="0.5" step="0.01"><span class="rval" id="ed-v-bu"></span></div>
+    <div class="row"><label data-tip="Rate of chain scission during recycling melt extrusion">Melt scission (β_r)</label><input type="range" id="ed-br" min="0" max="0.5" step="0.01"><span class="rval" id="ed-v-br"></span></div>
+  </div>
+
+  <div class="setcard" style="border-color:var(--orange)">
+    <h3 style="color:var(--text)">📦 Application Editor</h3>
+    <p style="font-size:.7rem;color:var(--muted);margin-bottom:.8rem">Control the emissions, contamination growth, and logistics associated with the product's use phase.</p>
+    <select id="ed-app" class="mb">
+      <option value="packaging">Food Packaging</option>
+      <option value="pipe">Pressure Pipe</option>
+      <option value="structural">Structural Part</option>
+      <option value="fiber">Textile Fibre</option>
+    </select>
+    <div class="row"><label data-tip="Direct use-phase emissions (transport, chilling, etc)">Use-phase E (kgCO₂)</label><input type="range" id="ed-euse" min="0" max="1" step="0.01"><span class="rval" id="ed-v-euse"></span></div>
+    <div class="row"><label data-tip="Base cost to collect and pre-sort this product type">Collection cost (USD)</label><input type="range" id="ed-csort" min="0" max="1" step="0.01"><span class="rval" id="ed-v-csort"></span></div>
+    <div class="row"><label data-tip="Logistic growth rate of contamination acquired per cycle">Contam. growth (k)</label><input type="range" id="ed-kcont" min="0" max="0.3" step="0.01"><span class="rval" id="ed-v-kcont"></span></div>
+  </div>
+
+  <div class="setcard">
+    <h3>Operating Zone (Cuboid)</h3>
+    <div class="row"><label data-tip="Q below this = zone exit">Q minimum</label><input type="range" id="cfg-qmin" min=".1" max=".9" step=".01" value=".35"><span class="rval" id="v-qmin">0.35</span></div>
+    <div class="row"><label data-tip="Cumulative env. burden ceiling (kg CO₂eq/kg)">E maximum</label><input type="range" id="cfg-emax" min="5" max="80" step="1" value="25"><span class="rval" id="v-emax">25</span></div>
+    <div class="row"><label data-tip="Cumulative net cost ceiling (USD/kg)">C maximum</label><input type="range" id="cfg-cmax" min="1" max="30" step=".5" value="8"><span class="rval" id="v-cmax">8.0</span></div>
+  </div>
+
+  <div class="setcard">
+    <h3>Simulation Control</h3>
+    <div class="row"><label>Total cycles</label><input type="range" id="cfg-cycles" min="5" max="60" step="1" value="20"><span class="rval" id="v-cycles">20</span></div>
+    <div class="row"><label data-tip="1 = deterministic, no noise">MC runs (1=deterministic)</label><input type="range" id="cfg-mc" min="1" max="20" step="1" value="1"><span class="rval" id="v-mc">1</span></div>
+    <div class="row"><label>Noise scale σ</label><input type="range" id="cfg-noise" min="0" max=".12" step=".005" value=".02"><span class="rval" id="v-noise">0.020</span></div>
+  </div>
+
+  <div class="setcard">
+    <h3>Recycling &amp; Virgin Blend</h3>
+    <div class="row"><label data-tip="Virgin fraction added each recycle cycle. 0 = pure secondary.">Virgin blend λ</label><input type="range" id="cfg-lam" min="0" max=".5" step=".01" value="0"><span class="rval" id="v-lam">0.00</span></div>
+    <div class="row"><label data-tip="Virgin polymer production cost (USD/kg)">Virgin cost (USD/kg)</label><input type="range" id="cfg-vcost" min=".3" max="3" step=".05" value="1.2"><span class="rval" id="v-vcost">1.200</span></div>
+    <div class="row"><label data-tip="Virgin polymer production E (kgCO₂/kg)">Virgin E (kgCO₂/kg)</label><input type="range" id="cfg-ve" min=".5" max="5" step=".1" value="1.9"><span class="rval" id="v-ve">1.90</span></div>
+    <div class="row"><label data-tip="Recyclate price at Q=1 (USD/kg) — revenue offsets cost">Recyclate price v₀</label><input type="range" id="cfg-v0" min=".1" max="2" step=".05" value=".8"><span class="rval" id="v-v0">0.800</span></div>
+  </div>
+
+  <div class="setcard">
+    <h3>Q Property Weights</h3>
+    <p style="font-size:.73rem;color:var(--muted);margin-bottom:.5rem">Base weights loaded from Application selection.</p>
+    <div class="row"><label>Tensile Strength</label><input type="range" id="w-tensile" min="0" max=".4" step=".01" value=".12"><span class="rval" id="wv-tensile">0.12</span></div>
+    <div class="row"><label>Elongation at Break</label><input type="range" id="w-elong" min="0" max=".4" step=".01" value=".20"><span class="rval" id="wv-elong">0.20</span></div>
+    <div class="row"><label>Elastic Modulus</label><input type="range" id="w-modulus" min="0" max=".4" step=".01" value=".12"><span class="rval" id="wv-modulus">0.12</span></div>
+    <div class="row"><label>Impact Resistance</label><input type="range" id="w-impact" min="0" max=".4" step=".01" value=".15"><span class="rval" id="wv-impact">0.15</span></div>
+    <div class="row"><label>MFR Processability</label><input type="range" id="w-mfr" min="0" max=".4" step=".01" value=".18"><span class="rval" id="wv-mfr">0.18</span></div>
+    <div class="row"><label>Hardness</label><input type="range" id="w-hardness" min="0" max=".4" step=".01" value=".08"><span class="rval" id="wv-hardness">0.08</span></div>
+    <div class="row"><label>Flexural Modulus</label><input type="range" id="w-flexural" min="0" max=".4" step=".01" value=".10"><span class="rval" id="wv-flexural">0.10</span></div>
+    <div class="row"><label>Creep Resistance</label><input type="range" id="w-creep" min="0" max=".4" step=".01" value=".05"><span class="rval" id="wv-creep">0.05</span></div>
+  </div>
+
+  <div class="setcard">
+    <h3>Display Options</h3>
+    <div class="row"><label>Tooltips <input type="checkbox" id="cfg-tips" checked></label></div>
+    <div class="row"><label>Show operating zone cuboid <input type="checkbox" id="cfg-zone" checked></label></div>
+  </div>
+
+</div>
+<div style="text-align:center;margin-top:1.2rem">
+  <button class="btn bprimary" id="saveRun" style="max-width:220px;display:inline-block;padding:.8rem;font-size:1rem">Save &amp; Run Simulation</button>
+</div>
+</div>
+</div>
+
+<!-- ═══════════════ DOCS PAGE ═══════════════ -->
+<div class="page" id="page-docs">
+<div class="docspage">
+<div class="docsin">
+
+<h1 style="font-size:1.3rem;font-weight:800;margin-bottom:.3rem">Spiral · Prototype 2.4 · Technical Documentation</h1>
+<p style="color:var(--muted);font-size:.8rem">Physics-grounded plastic LCA &amp; recyclability simulation · Circularity State-Space Framework</p>
+
+<h2>1. State Space &amp; Operating Zone</h2>
+<p>Every material batch is represented as a point in a 3D state space. At every step (Use or Recycle), we track:</p>
+<div class="eq">s = (E, C, Q)
+<span class="c">E = cumulative environmental burden  [kg CO₂eq/kg]
+C = cumulative net economic cost     [USD/kg]
+Q = composite material quality index [0, 1]</span></div>
+<p>The <b>operating zone</b> is defined by user constraints: Z = {E ≤ E_max, C ≤ C_max, Q ≥ Q_min}. In the 3D plot, states inside this cuboid are coloured <b style="color:var(--accent)">Cyan</b>. Once a trajectory exits the cuboid, the state is considered "Failed" and the markers turn <b style="color:var(--red)">Red</b>, though the simulation continues to trace the ultimate breakdown trajectory. A uniform connecting line traces the entire genealogy.</p>
+
+<h2>2. The "Greedy Auto-Selector" Algorithm</h2>
+<p>If "✨ Greedy Auto-Selector" is chosen, the engine acts as an optimal controller. At the start of each recycle phase, it simulates the outcome of all available recycling technologies. It calculates a "Net Cost Score":</p>
+<div class="eq">Cost_Score = - (ΔC_recycle + σ_carbon * ΔE_recycle)</div>
+<ul>
+<li><b>If valid options exist:</b> The algorithm selects the technology with the highest Cost_Score (i.e. cheapest to run + carbon tax) that successfully clears the Q_min threshold.</li>
+<li><b>If no valid options exist:</b> (Because the material is too heavily degraded), it abandons cost constraints and purely selects the technology that yields the maximum possible Q (typically Chemical Recycling) in an attempt to rescue the batch.</li>
+</ul>
+
+<h2>3. Root-Cause Variables (Internal State)</h2>
+<p>The macroscopic Q is derived from three fundamental physical variables tracked per cycle:</p>
+<div class="eq">s_internal = [ m̄, Xc, Ci ]
+<span class="c">m̄  = normalised weight-avg mol. weight  Mw(n)/Mw₀  ∈ [0,1]
+Xc  = crystallinity fraction                          ∈ [0, Xc_max]
+Ci  = contamination index (foreign species mass frac) ∈ [0,1]
+π   = purity = 1 − Ci                                ∈ [0,1]</span></div>
+
+<h2>4. Parameter Editors &amp; Physics Equations</h2>
+<p>In the Settings tab, three Editors control how the simulation runs. The underlying math uses these exact parameters:</p>
+
+<h3>4a. Technology Editor (Recycle Phase)</h3>
+<ul>
+  <li><b>Restoration Efficiency (ρ):</b> How well the technology rebuilds chains.
+    <div class="eq">Q_restored = Q_before · (1 − ρ) + ρ · m̄^0.4 · π^0.3</div>
+  </li>
+  <li><b>Purification Efficiency (φ):</b> How much contamination is removed.
+    <div class="eq">Ci_new = Ci_old · (1 − φ)</div>
+  </li>
+  <li><b>Energy Burden (ε):</b> Base energy emissions, which scale up if material is dirty or degraded.
+    <div class="eq">ΔE_recycle = ε / (Q · π) + ΔE_virgin</div>
+  </li>
+  <li><b>Economic Cost (κ):</b> Base financial cost, scaling with impurity.
+    <div class="eq">ΔC_recycle = κ / π + ΔC_virgin - Revenue(Q)</div>
+  </li>
+</ul>
+
+<h3>4b. Polymer Editor</h3>
+<ul>
+  <li><b>Use-phase scission (β_u):</b> The rate at which chains break due to UV/thermal aging during the product's life. Accelerated by existing contamination.
+    <div class="eq">m̄_new = m̄_old · exp(−β_u · (1 + Ci))</div>
+  </li>
+  <li><b>Melt scission (β_r):</b> The rate at which chains break due to sheer stress and heat in the recycling extruder.
+    <div class="eq">m̄_after_melt = m̄_before_melt · exp(−β_r)</div>
+  </li>
+</ul>
+
+<h3>4c. Application Editor (Use Phase)</h3>
+<ul>
+  <li><b>Use-phase E:</b> Direct carbon emissions generated by using/transporting the product. Added to ΔE during the use phase.</li>
+  <li><b>Collection Cost:</b> The baseline cost to retrieve and sort this type of product. Scales linearly with contamination.
+    <div class="eq">ΔC_use = Collection_Cost · (1 + Ci)</div>
+  </li>
+  <li><b>Contamination Growth (k):</b> Determines how fast dirt, labels, or mixed polymers accumulate onto the material per cycle (logistic growth).
+    <div class="eq">Ci_new = Ci_old + k · (1 − Ci_old)</div>
+  </li>
+</ul>
+
+</div>
+</div>
+</div><!-- /page-docs -->
+
+<div class="tipbox" id="tipBox"></div>
+
+<script>
+// ═══════════════════ DATA ═══════════════════
+const POLY={
+  hdpe:{name:'HDPE',bu:0.08,br:0.12,Xc0:.45,Xcm:.65,rE:4.0,ks:.10,gs:1.5,be:2.0},
+  pet: {name:'PET', bu:0.22,br:0.18,Xc0:.25,Xcm:.45,rE:3.5,ks:.08,gs:2.0,be:2.5},
+  pp:  {name:'PP',  bu:0.12,br:0.15,Xc0:.35,Xcm:.55,rE:3.8,ks:.12,gs:1.8,be:2.2},
+  pla: {name:'PLA', bu:0.35,br:0.28,Xc0:.15,Xcm:.45,rE:3.2,ks:.15,gs:2.2,be:2.8},
+  ldpe:{name:'LDPE',bu:0.10,br:0.13,Xc0:.20,Xcm:.35,rE:3.0,ks:.09,gs:1.6,be:2.1}
+};
+const TECH={
+  mechanical:    {name:'Mechanical',   rho:.55,phi:.00,br:.12,fm:.60,kr:.15,eps:.40,kap:.25},
+  solvent:       {name:'Solvent',      rho:.75,phi:.70,br:.02,fm:.80,kr:.10,eps:.80,kap:.60},
+  chemical:      {name:'Chemical',     rho:.90,phi:.95,br:.00,fm:1.0,kr:.05,eps:1.80,kap:1.20},
+  compatibilizer:{name:'Compat.',      rho:.60,phi:.30,br:.10,fm:.50,kr:.12,eps:.50,kap:.40},
+  stabilizer:    {name:'Stabilizer',   rho:.65,phi:.00,br:.08,fm:.60,kr:.15,eps:.30,kap:.20}
+};
+const APPS={
+  packaging: {name:'Food Packaging', euse:0.05, csort:0.08, kcont:0.08, w:{tensile:.12,elong:.20,modulus:.12,impact:.15,mfr:.18,hardness:.08,flexural:.10,creep:.05}, crit:['tensile','elong','mfr']},
+  pipe:      {name:'Pressure Pipe',  euse:0.02, csort:0.15, kcont:0.04, w:{tensile:.20,elong:.15,modulus:.15,impact:.10,mfr:.15,hardness:.10,flexural:.15,creep:.20}, crit:['tensile','mfr','creep']},
+  structural:{name:'Structural Part',euse:0.08, csort:0.12, kcont:0.06, w:{tensile:.18,elong:.12,modulus:.20,impact:.20,mfr:.08,hardness:.12,flexural:.10,creep:.10}, crit:['modulus','impact','tensile']},
+  fiber:     {name:'Textile Fibre',  euse:0.10, csort:0.20, kcont:0.15, w:{tensile:.25,elong:.20,modulus:.15,impact:.05,mfr:.20,hardness:.10,flexural:.05,creep:.00}, crit:['tensile','elong']}
+};
+
+// ═══════════════════ CONFIG ═══════════════════
+let CFG={
+  qmin:.35,emax:25,cmax:8,cycles:20,mc:1,noise:.02,
+  lam:0,vcost:1.2,ve:1.9,v0:.8,gamma:1.5,
+  grid:.4,sigco:.05,
+  tips:true,showZone:true,ci0:.02,app:'packaging'
+};
+
+// ═══════════════════ EDITOR BINDINGS ═══════════════════
+function loadTechEd(){
+  const t=TECH[document.getElementById('ed-tech').value];
+  ['rho','phi','eps','kap'].forEach(k=>{
+    document.getElementById('ed-'+k).value=t[k];
+    document.getElementById('ed-v-'+k).textContent=t[k].toFixed(2);
+  });
+}
+function loadPolyEd(){
+  const p=POLY[document.getElementById('ed-poly').value];
+  ['bu','br'].forEach(k=>{
+    document.getElementById('ed-'+k).value=p[k];
+    document.getElementById('ed-v-'+k).textContent=p[k].toFixed(2);
+  });
+}
+function loadAppEd(){
+  const a=APPS[document.getElementById('ed-app').value];
+  ['euse','csort','kcont'].forEach(k=>{
+    document.getElementById('ed-'+k).value=a[k];
+    document.getElementById('ed-v-'+k).textContent=a[k].toFixed(2);
+  });
+  // Also load weights
+  Object.entries(a.w).forEach(([wk,wv])=>{
+    const el=document.getElementById('w-'+wk);
+    if(el){ el.value=wv; document.getElementById('wv-'+wk).textContent=wv.toFixed(2); }
+  });
+}
+
+document.getElementById('ed-tech').addEventListener('change',loadTechEd);
+['rho','phi','eps','kap'].forEach(k=>{
+  document.getElementById('ed-'+k).addEventListener('input',e=>{
+    const v=parseFloat(e.target.value);
+    document.getElementById('ed-v-'+k).textContent=v.toFixed(2);
+    TECH[document.getElementById('ed-tech').value][k]=v;
+  });
+});
+
+document.getElementById('ed-poly').addEventListener('change',loadPolyEd);
+['bu','br'].forEach(k=>{
+  document.getElementById('ed-'+k).addEventListener('input',e=>{
+    const v=parseFloat(e.target.value);
+    document.getElementById('ed-v-'+k).textContent=v.toFixed(2);
+    POLY[document.getElementById('ed-poly').value][k]=v;
+  });
+});
+
+document.getElementById('ed-app').addEventListener('change',loadAppEd);
+['euse','csort','kcont'].forEach(k=>{
+  document.getElementById('ed-'+k).addEventListener('input',e=>{
+    const v=parseFloat(e.target.value);
+    document.getElementById('ed-v-'+k).textContent=v.toFixed(2);
+    APPS[document.getElementById('ed-app').value][k]=v;
+  });
+});
+
+// Init editors
+loadTechEd(); loadPolyEd(); loadAppEd();
+
+// Keep app selectors in sync
+document.getElementById('appSel').addEventListener('change',e=>{
+  document.getElementById('ed-app').value = e.target.value;
+  loadAppEd();
+});
+
+// ═══════════════════ PHYSICS ═══════════════════
+function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function cl(x,lo=0,hi=1){return Math.max(lo,Math.min(hi,x))}
+
+function props(s,p){
+  const dXc=s.Xc-p.Xc0;
+  const ten=cl(Math.pow(s.m,.5)*(1+p.ks*dXc)*Math.pow(cl(1-s.Ci),p.gs));
+  const amF0=Math.max(.01,1-p.Xc0),amF=Math.max(0,1-s.Xc);
+  const elo=cl(Math.pow(s.m,1.5)*Math.pow(amF/amF0,p.be)*cl(1-s.Ci));
+  const E0d=(1-p.Xc0)+p.rE*p.Xc0;
+  const Eraw=((1-s.Xc)+p.rE*s.Xc)/E0d;
+  const crk=1-.15*Math.pow(1-s.m,2);
+  const mod=cl(Eraw*crk*(1-.5*s.Ci));
+  const xF0=Math.max(.01,1-p.Xc0/p.Xcm),xF=Math.max(0,1-s.Xc/p.Xcm);
+  const imp=cl(Math.pow(s.m,.5)*Math.pow(xF/xF0,2)*cl(1-s.Ci));
+  const mfr=cl(Math.pow(s.m,3.4)/(1+2*s.Ci));
+  const hrd=cl(Math.sqrt(p.Xc0>0?s.Xc/p.Xc0:1)*(1-.12*Math.pow(1-s.m,2)));
+  const flx=cl(mod*Math.sqrt(Math.max(0,1-1.2*s.Ci)));
+  const crp=cl(Math.pow(s.m,1.5)*(1-1.5*s.Ci));
+  return{tensile:ten,elong:elo,modulus:mod,impact:imp,mfr,hardness:hrd,flexural:flx,creep:crp};
+}
+
+function computeQ(pr,w,crit){
+  const ks=['tensile','elong','modulus','impact','mfr','hardness','flexural','creep'];
+  let tot=0,ws=0;
+  ks.forEach(k=>{tot+=(w[k]||0)*pr[k];ws+=(w[k]||0)});
+  const avg=ws>0?tot/ws:0;
+  let gate=1;
+  crit.forEach(k=>{gate*=Math.min(1,pr[k]/.30)});
+  return cl(avg*gate);
+}
+
+function runRecycleStep(sU, QU, E, C, p, t, noise){
+  const m_r=cl(sU.m*Math.exp(-t.br)*(1+noise*randn()*.08));
+  const Xcm2=sU.Xc*(1-t.fm)+p.Xc0*t.fm;
+  const Xc_r=cl(Xcm2+t.kr*(p.Xcm-Xcm2)+noise*randn()*.01,0,p.Xcm);
+  const Ci_r=cl(sU.Ci*(1-t.phi)*(1+noise*randn()*.08));
+
+  const lam=CFG.lam;
+  const m_b=lam*1.0+(1-lam)*m_r;
+  const Xc_b=lam*p.Xc0+(1-lam)*Xc_r;
+  const Ci_b=(1-lam)*Ci_r;
+  const sR={m:m_b,Xc:Xc_b,Ci:Ci_b};
+  const prR=props(sR,p);
+  const pi_r=Math.max(.01,1-Ci_b);
+  const QR=cl(QU*(1-t.rho)+t.rho*Math.pow(m_b,.4)*Math.pow(pi_r,.3));
+
+  const dEr=t.eps/Math.max(.05,QU*Math.max(.01,1-sU.Ci))+lam*CFG.ve;
+  const dCr=t.kap/Math.max(.01,pi_r)+lam*CFG.vcost - CFG.v0*Math.pow(Math.max(0.01,QR),CFG.gamma);
+  const inR=QR>=CFG.qmin&&(E+dEr)<=CFG.emax&&(C+dCr)<=CFG.cmax;
+
+  return {sR, prR, QR, dEr, dCr, inR, lam};
+}
+
+function simRun(pk,tk,ak){
+  const p=POLY[pk];
+  const a=APPS[ak];
+  let s={m:1,Xc:p.Xc0,Ci:CFG.ci0};
+  let E=0,C=0;
+  const traj=[];
+
+  // Update weights from UI
+  const w={}, crit=a.crit;
+  ['tensile','elong','modulus','impact','mfr','hardness','flexural','creep'].forEach(k=>{
+    w[k] = parseFloat(document.getElementById('w-'+k).value);
+  });
+
+  let pr0=props(s,p);
+  let Q=computeQ(pr0,w,crit);
+
+  // Push Initial state
+  traj.push({cyc:0, phase:'virgin', tech:'Virgin', E, C, Q, props:pr0, root:{...s}, inZone:true, dE:0, dC:0});
+
+  for(let cyc=1;cyc<=CFG.cycles;cyc++){
+    const sg=CFG.noise*(1+s.Ci);
+
+    // ── USE PHASE ──
+    const m_u=cl(s.m*Math.exp(-(p.bu*(1+s.Ci)))*(1+sg*randn()*.35));
+    const dXcG=.12*(p.Xcm-s.Xc), dXcD=.08*Math.pow(1-s.m,2);
+    const Xc_u=cl(s.Xc+dXcG-dXcD+sg*randn()*.012,0,p.Xcm);
+    const Ci_u=cl(s.Ci+a.kcont*(1-s.Ci)*(1+sg*randn()*.25));
+    const sU={m:m_u,Xc:Xc_u,Ci:Ci_u};
+
+    const prU=props(sU,p);
+    const QU=computeQ(prU,w,crit);
+    const dEu=a.euse+CFG.grid*.05*(1+sU.Ci);
+    const dCu=a.csort*(1+sU.Ci);
+    E+=dEu; C+=dCu;
+    const inU=QU>=CFG.qmin&&E<=CFG.emax&&C<=CFG.cmax;
+    traj.push({cyc,phase:'use',tech:'Use Phase',E,C,Q:QU,props:prU,root:{...sU},inZone:inU,dE:dEu,dC:dCu});
+
+    // ── RECYCLE PHASE ──
+    let bestRes = null;
+    let chosenTechName = '';
+
+    if(tk === 'greedy'){
+      let bValid=null, bValidScore=-Infinity;
+      let bAny=null, bAnyScore=-Infinity;
+
+      Object.keys(TECH).forEach(k => {
+        const t = TECH[k];
+        const res = runRecycleStep(sU, QU, E, C, p, t, CFG.noise);
+        const costScore = -(res.dCr + CFG.sigco * res.dEr);
+
+        if(res.inR && costScore > bValidScore){ bValidScore = costScore; bValid = {k, res}; }
+        if(!res.inR && res.QR > bAnyScore){ bAnyScore = res.QR; bAny = {k, res}; }
+      });
+
+      const winner = bValid || bAny;
+      bestRes = winner.res;
+      chosenTechName = TECH[winner.k].name;
+    } else {
+      bestRes = runRecycleStep(sU, QU, E, C, p, TECH[tk], CFG.noise);
+      chosenTechName = TECH[tk].name;
+    }
+
+    E += bestRes.dEr; 
+    C = Math.max(0, C + bestRes.dCr);
+
+    traj.push({
+      cyc, phase:'recycle', tech: chosenTechName, 
+      E, C, Q:bestRes.QR, props:bestRes.prR, 
+      root:{...bestRes.sR}, inZone:bestRes.inR, 
+      dE:bestRes.dEr, dC:bestRes.dCr, lam:bestRes.lam
+    });
+
+    s=bestRes.sR; Q=bestRes.QR;
+  }
+  return traj;
+}
+
+// ═══════════════════ SIMULATION RUNNER ═══════════════════
+let TRAJS=[];
+async function run(){
+  readCFG();
+  TRAJS=[];
+  const pk=document.getElementById('polySel').value;
+  const tk=document.getElementById('techSel').value;
+  const ak=document.getElementById('appSel').value;
+
+  document.getElementById('spinOv').classList.add('show');
+  document.getElementById('runBtn').disabled=true;
+  document.getElementById('progWrap').style.display='block';
+  const n=Math.max(1,CFG.mc);
+  for(let i=0;i<n;i++){
+    TRAJS.push(simRun(pk,tk,ak));
+    document.getElementById('progBar').style.width=((i+1)/n*100)+'%';
+    document.getElementById('spinLbl').textContent=`Running ${i+1}/${n}…`;
+    if(i%3===0)await new Promise(r=>setTimeout(r,4));
+  }
+  document.getElementById('spinOv').classList.remove('show');
+  document.getElementById('runBtn').disabled=false;
+  const maxI=Math.max(...TRAJS.map(t=>t.length))-1;
+  const sc=document.getElementById('cycScrub');
+  sc.max=maxI; sc.value=maxI;
+  render3D(pk,tk);
+  updateStats();
+  updateGauges(maxI);
+  document.getElementById('btn2d').textContent='Q/cycle';
+}
+
+// ═══════════════════ 3D PLOT ═══════════════════
+function render3D(pk,tk){
+  pk=pk||document.getElementById('polySel').value;
+  tk=tk||document.getElementById('techSel').value;
+  const traces=[];
+
+  TRAJS.forEach((traj,ri)=>{
+    const mkTrace=(pts,lineCol,width)=>({
+      type:'scatter3d',mode:'lines+markers',
+      x:pts.map(s=>s.E),y:pts.map(s=>s.C),z:pts.map(s=>s.Q),
+      line:{color:lineCol,width:width},
+      marker:{
+        color:pts.map(s=>s.inZone?'#58a6ff':'#f85149'),
+        size:4, symbol:'circle', opacity:0.9,
+        line:{color:'#0d1117',width:0.5}
+      },
+      showlegend:false,
+      hovertemplate:'<b>Cycle %{customdata.cyc} · %{customdata.phase}</b><br>Tech: %{customdata.tech}<br>E: %{x:.3f} kgCO₂<br>C: $%{y:.3f}<br>Q: %{z:.3f}<extra></extra>',
+      customdata:pts.map(s=>({cyc:s.cyc, phase:s.phase, tech:s.tech}))
+    });
+
+    const col='rgba(139,148,158,0.4)';
+    traces.push(mkTrace(traj,col,CFG.mc===1?3:1.5));
+  });
+
+  if(CFG.showZone){
+    const qn=CFG.qmin,em=CFG.emax,cm=CFG.cmax;
+    const corners=[
+      [0,0,qn],[em,0,qn],[em,cm,qn],[0,cm,qn],[0,0,qn],
+      [0,0,1],[em,0,1],[em,cm,1],[0,cm,1],[0,0,1],
+    ];
+    traces.push({type:'scatter3d',mode:'lines',
+      x:corners.map(c=>c[0]),y:corners.map(c=>c[1]),z:corners.map(c=>c[2]),
+      line:{color:'rgba(88,166,255,0.4)',width:2},showlegend:false,hoverinfo:'skip'});
+    [[0,0],[em,0],[em,cm],[0,cm]].forEach(([ex,cy])=>{
+      traces.push({type:'scatter3d',mode:'lines',
+        x:[ex,ex],y:[cy,cy],z:[qn,1],
+        line:{color:'rgba(88,166,255,0.3)',width:1.5},showlegend:false,hoverinfo:'skip'});
+    });
+    traces.push({type:'surface',
+      x:[0,em],y:[0,cm],z:[[qn,qn],[qn,qn]],
+      colorscale:[[0,'rgba(88,166,255,0.12)'],[1,'rgba(88,166,255,0.12)']],
+      showscale:false,opacity:.45,hoverinfo:'skip',
+      contours:{x:{highlight:false},y:{highlight:false},z:{highlight:false}}
+    });
+  }
+
+  const techLabel = tk === 'greedy' ? 'Greedy Auto-Selector' : TECH[tk].name;
+  document.getElementById('plotTitle').textContent=
+    `3D Circularity State-Space · ${POLY[pk].name} · ${techLabel} · ${TRAJS.length} run${TRAJS.length>1?'s':''}`;
+
+  Plotly.react('plot',traces,{
+    paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(0,0,0,0)',
+    font:{color:'#8b949e',size:11},
+    margin:{l:0,r:0,t:28,b:0},
+    scene:{
+      bgcolor:'rgba(0,0,0,0)',
+      xaxis:{title:'Env Burden E (kg CO₂eq/kg)',color:'#8b949e',gridcolor:'rgba(88,166,255,0.12)',showbackground:true,backgroundcolor:'rgba(22,27,34,.75)',range:[0,CFG.emax*1.05]},
+      yaxis:{title:'Net Cost C (USD/kg)',color:'#8b949e',gridcolor:'rgba(88,166,255,0.12)',showbackground:true,backgroundcolor:'rgba(22,27,34,.75)',range:[0,CFG.cmax*1.05]},
+      zaxis:{title:'Quality Q',color:'#8b949e',gridcolor:'rgba(88,166,255,0.12)',showbackground:true,backgroundcolor:'rgba(22,27,34,.75)',range:[0,1]},
+      camera:{eye:{x:1.55,y:-1.65,z:.88}}
+    }
+  },{responsive:true,displayModeBar:false});
+}
+
+// ═══════════════════ STATS ═══════════════════
+function updateStats(){
+  const n=TRAJS.length;
+  const last=TRAJS.map(t=>t[t.length-1]);
+  const sur=last.filter(s=>s.inZone).length;
+  const maxL=Math.max(...TRAJS.map(t=>t.length));
+  let hl='∞';
+  for(let i=0;i<maxL;i++){
+    const al=TRAJS.filter(t=>t.length>i&&t[i].inZone).length;
+    if(al/n<=.5){hl=Math.floor(i/2);break}
+  }
+  const avgQ=(last.reduce((a,s)=>a+s.Q,0)/n).toFixed(3);
+  const avgE=(last.reduce((a,s)=>a+s.E,0)/n).toFixed(2);
+  const avgC=(last.reduce((a,s)=>a+s.C,0)/n).toFixed(2);
+  const avgCi=(last.reduce((a,s)=>a+s.root.Ci,0)/n).toFixed(3);
+  document.getElementById('s-hl').textContent=hl;
+  document.getElementById('s-sr').textContent=((sur/n)*100).toFixed(0)+'%';
+  document.getElementById('s-q').textContent=avgQ;
+  document.getElementById('s-e').textContent=avgE;
+  document.getElementById('s-c').textContent=avgC;
+  document.getElementById('s-ci').textContent=avgCi;
+}
+
+// ═══════════════════ GAUGES ═══════════════════
+function updateGauges(idx){
+  const vld=TRAJS.filter(t=>t.length>idx);
+  if(!vld.length)return;
+  const ks=['tensile','elong','modulus','impact','mfr','hardness','flexural','creep'];
+  ks.forEach(k=>{
+    const avg=vld.reduce((s,t)=>s+t[idx].props[k],0)/vld.length;
+    const pct=Math.round(avg*100);
+    document.getElementById('g-'+k).style.width=pct+'%';
+    document.getElementById('p-'+k).textContent=pct+'%';
+    document.getElementById('g-'+k).className='gbar '+(avg>.65?'ghi':avg>.35?'gmid':'glo');
+  });
+  const s0=vld[0][idx];
+  const am=k=>vld.reduce((s,t)=>s+t[idx].root[k],0)/vld.length;
+  document.getElementById('pill-m').textContent=am('m').toFixed(3);
+  document.getElementById('pill-xc').textContent=am('Xc').toFixed(3);
+  const ci=am('Ci');
+  document.getElementById('pill-ci').textContent=ci.toFixed(3);
+  const pi=1-ci;
+  document.getElementById('pill-pi').textContent=pi.toFixed(3);
+  const lam=s0.lam||0;
+  document.getElementById('pill-lam').textContent=lam.toFixed(3);
+
+  const ciP=Math.round(ci*100);
+  document.getElementById('ciFill').style.width=ciP+'%';
+  document.getElementById('ciFill').style.background=ci<.10?'var(--green)':ci<.25?'var(--yellow)':'var(--red)';
+  document.getElementById('ciVal').textContent=ciP.toFixed(1)+'%';
+  document.getElementById('ciVal').style.color=ci<.10?'var(--green)':ci<.25?'var(--yellow)':'var(--red)';
+  const piP=Math.round(pi*100);
+  document.getElementById('piFill').style.width=piP+'%';
+  document.getElementById('piFill').style.background=pi>.90?'var(--green)':pi>.70?'var(--yellow)':'var(--red)';
+  document.getElementById('piVal').textContent=piP.toFixed(1)+'%';
+  const lamP=Math.round(lam*100);
+  document.getElementById('lamFill').style.width=lamP+'%';
+  document.getElementById('lamVal').textContent=lamP.toFixed(1)+'%';
+  document.getElementById('cycBadge').textContent=`${s0.cyc} · ${s0.tech}`;
+}
+
+// ═══════════════════ CONFIG READ ═══════════════════
+function readCFG(){
+  const g=id=>parseFloat(document.getElementById(id).value);
+  const gb=id=>document.getElementById(id).checked;
+  CFG.qmin=g('cfg-qmin');CFG.emax=g('cfg-emax');CFG.cmax=g('cfg-cmax');
+  CFG.cycles=g('cfg-cycles');CFG.mc=g('cfg-mc');CFG.noise=g('cfg-noise');
+  CFG.lam=g('cfg-lam');CFG.vcost=g('cfg-vcost');CFG.ve=g('cfg-ve');
+  CFG.v0=g('cfg-v0');
+  CFG.tips=gb('cfg-tips');CFG.showZone=gb('cfg-zone');
+}
+
+// ═══════════════════ TOOLTIPS ═══════════════════
+const tipBox=document.getElementById('tipBox');
+document.addEventListener('mousemove',e=>{
+  if(!CFG.tips){tipBox.classList.remove('show');return}
+  const el=e.target.closest('[data-tip]');
+  if(el){
+    tipBox.textContent=el.dataset.tip;
+    tipBox.classList.add('show');
+    tipBox.style.left=Math.min(e.clientX+14,window.innerWidth-270)+'px';
+    tipBox.style.top=Math.min(e.clientY+14,window.innerHeight-80)+'px';
+  }else{tipBox.classList.remove('show')}
+});
+
+// ═══════════════════ NAV ═══════════════════
+document.querySelectorAll('.nav-tab').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById('page-'+b.dataset.page).classList.add('active');
+  });
+});
+
+// ═══════════════════ SLIDERS ═══════════════════
+[['cfg-qmin','v-qmin',3],['cfg-emax','v-emax',0],['cfg-cmax','v-cmax',1],
+ ['cfg-cycles','v-cycles',0],['cfg-mc','v-mc',0],['cfg-noise','v-noise',3],
+ ['cfg-lam','v-lam',2],['cfg-vcost','v-vcost',3],
+ ['cfg-ve','v-ve',2],['cfg-v0','v-v0',3],
+ ['w-tensile','wv-tensile',2],['w-elong','wv-elong',2],['w-modulus','wv-modulus',2],
+ ['w-impact','wv-impact',2],['w-mfr','wv-mfr',2],['w-hardness','wv-hardness',2],
+ ['w-flexural','wv-flexural',2],['w-creep','wv-creep',2]
+].forEach(([s,v,d])=>{
+  const sl=document.getElementById(s),vl=document.getElementById(v);
+  if(sl&&vl)sl.addEventListener('input',()=>{vl.textContent=parseFloat(sl.value).toFixed(d)});
+});
+
+// ═══════════════════ CYCLE NAV ═══════════════════
+document.getElementById('cycScrub').addEventListener('input',e=>updateGauges(+e.target.value));
+
+// ═══════════════════ BUTTONS ═══════════════════
+document.getElementById('runBtn').addEventListener('click',run);
+document.getElementById('saveRun').addEventListener('click',()=>{
+  document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelector('[data-page="sim"]').classList.add('active');
+  document.getElementById('page-sim').classList.add('active');
+  run();
+});
+document.getElementById('btnCam').addEventListener('click',()=>{
+  Plotly.relayout('plot',{'scene.camera':{eye:{x:1.55,y:-1.65,z:.88}}});
+});
+document.getElementById('btn2d').addEventListener('click',function(){
+  if(!TRAJS.length)return;
+  if(this.textContent==='Q/cycle'){
+    this.textContent='3D';
+    const t2=TRAJS.map(traj=>({
+      type:'scatter',mode:'lines+markers',
+      x:traj.map((_,i)=>i),y:traj.map(s=>s.Q),
+      line:{color:'rgba(139,148,158,0.4)',width:1.5},
+      marker:{
+        color:traj.map(s=>s.inZone?'#58a6ff':'#f85149'),
+        size:6, line:{color:'#0d1117',width:1}
+      },
+      showlegend:false,
+      hovertemplate:'Step %{x}<br>Tech: %{customdata}<br>Q: %{y:.3f}<extra></extra>',
+      customdata:traj.map(s=>s.tech)
+    }));
+    t2.push({type:'scatter',mode:'lines',
+      x:[0,TRAJS[0].length],y:[CFG.qmin,CFG.qmin],
+      line:{color:'rgba(248,81,73,.5)',dash:'dash',width:1.5},showlegend:false,hoverinfo:'skip'});
+    Plotly.newPlot('plot',t2,{
+      paper_bgcolor:'rgba(0,0,0,0)',plot_bgcolor:'rgba(22,27,34,.9)',
+      font:{color:'#8b949e'},margin:{l:48,r:15,t:20,b:42},
+      xaxis:{title:'Simulation Step',color:'#8b949e',gridcolor:'rgba(88,166,255,.08)'},
+      yaxis:{title:'Quality Q',color:'#8b949e',gridcolor:'rgba(88,166,255,.08)',range:[0,1.05]}
+    },{responsive:true,displayModeBar:false});
+  }else{
+    this.textContent='Q/cycle';
+    render3D();
+  }
+});
+
+// ═══════════════════ INIT ═══════════════════
+window.addEventListener('load',run);
+</script>
+</body>
+</html>
