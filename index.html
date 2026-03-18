@@ -676,7 +676,8 @@ function runRecycleStep(sU, QU, E, C, p, t, noise, w, crit){
   const m_b=lam*1.0+(1-lam)*m_r;
   const Xc_b=lam*p.Xc0+(1-lam)*Xc_r;
   const Ci_b=(1-lam)*Ci_r;
-  const sR={m:m_b,Xc:Xc_b,Ci:Ci_b, lc:lc_r};
+  const lc_b = lam*p.lc0 + (1-lam)*lc_r;
+  const sR={m:m_b, Xc:Xc_b, Ci:Ci_b, lc:lc_b};
   const prR=props(sR,p);
   const pi_r=Math.max(.01,1-Ci_b);
   const QR=computeQ(prR, w, crit);
