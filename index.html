@@ -344,200 +344,159 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
 <div class="page" id="page-docs">
 <div class="docspage">
 <div class="docsin">
+  <h2>Spiral · Technical Documentation v2.4</h2>
+  <p>Complete mathematical specification of the Circularity State-Space (CSS) Framework. All property calculations are grounded in polymer physics literature and designed to be experimentally verifiable via GPC, DSC, SAXS, and analytical chemistry.</p>
 
-<h1>Spiral · Technical Documentation v2.4</h1>
-<p style="color:#8b949e;font-size:1.1rem;margin-bottom:2rem">Complete mathematical specification of the Circularity State-Space (CSS) Framework for polymer recyclability simulation</p>
+  <h2>1. The Three-Axis State Space</h2>
+  <p>Every recycling cycle traces a point in (Q, E, C) space. The simulation maps the trajectory of a polymer through repeated use and recycling, checking at each step whether it remains inside the operating zone cuboid.</p>
+  <div class="eq">Z = { s ∈ ℝ³ | Q ≥ Q_min, E ≤ E_max, C ≤ C_max }
+E_max ∈ [5, 80] kg CO₂eq/kg &nbsp;<span class="c">// corporate sustainability target</span>
+C_max ∈ [1, 30] USD/kg &nbsp;<span class="c">// willingness to pay</span>
+Q_min ∈ [0.1, 0.9] &nbsp;<span class="c">// minimum performance threshold</span></div>
 
-<div class="sidebar">
-<h4>🧪 Core State Variables</h4>
-<ul>
-<li><b>E</b>: Cumulative environmental burden [kg CO₂eq/kg]</li>
-<li><b>C</b>: Cumulative net economic cost [USD/kg]</li>
-<li><b>Q</b>: Composite quality index [0,1]</li>
-</ul>
-<h4>📊 Internal State</h4>
-<ul>
-<li><b>m̄</b>: Normalized molecular weight</li>
-<li><b>Xc</b>: Crystallinity fraction</li>
-<li><b>Ci</b>: Contamination index</li>
-<li><b>π</b>: Purity = 1−Ci</li>
-</ul>
+  <h2>2. Internal State Variables</h2>
+  <p>Four root-cause variables drive all macroscopic behavior. These are chosen because they are independently measurable in a laboratory and have well-established links to mechanical properties in the literature.</p>
+  <table class="dtbl">
+    <tr><th>Variable</th><th>Measurement Method</th><th>Physical Meaning</th></tr>
+    <tr><td>m̄ = M_w(n)/M_w(0)</td><td>GPC / SEC</td><td>Normalized weight-average molecular weight. Tracks chain scission over cycles. Range [0,1].</td></tr>
+    <tr><td>Xc</td><td>DSC (enthalpy method)</td><td>Crystallinity fraction. Affects stiffness, hardness, ductility. Range [0, Xc_max].</td></tr>
+    <tr><td>Ci</td><td>Analytical chemistry / XRF</td><td>Mass fraction of foreign contaminants. Degrades nearly all properties. Range [0,1].</td></tr>
+    <tr><td>lc [nm]</td><td>DSC (Gibbs-Thomson) / SAXS</td><td>Lamellar thickness. Governs creep resistance and impact toughness via crystallite stability.</td></tr>
+  </table>
+
+  <h2>3. State Variable Evolution</h2>
+
+  <h3>3.1 Use Phase</h3>
+  <p>During use, chains undergo thermal and mechanical scission, crystallinity drifts toward equilibrium (accelerated by shorter chains as nucleation sites), and contamination grows logistically.</p>
+  <div class="eq">m̄_u = clamp( m̄ · exp(−β_u · (1 + Ci)) · (1 + σ·𝒩(0,1)) )
+<span class="c">// β_u: use-phase scission rate. Contamination accelerates degradation (Ref: Morreale et al. 2024)</span>
+
+Xc_u = clamp( Xc + ΔXc_G·nucBoost − ΔXc_D + σ·𝒩(0,1) )
+  ΔXc_G = 0.12·(Xc_max − Xc) &nbsp;<span class="c">// growth toward equilibrium</span>
+  ΔXc_D = 0.08·(1−m̄)² &nbsp;<span class="c">// crack-induced amorphization</span>
+  nucBoost = 1 + 0.4·(1−m̄) &nbsp;<span class="c">// shorter chains nucleate faster (Greco et al. 2023)</span>
+
+Ci_u = clamp( Ci + k·(1−Ci) ) &nbsp;<span class="c">// logistic contamination growth</span>
+
+lc_u = clamp( lc · (1 − 0.05·(1−m̄)) · (1 + 0.02·(Xc − Xc₀)) )
+<span class="c">// lamellae thin as chains shorten; slightly thicken if crystallinity grows (Strobl 1996)</span></div>
+
+  <h3>3.2 Recycle Phase</h3>
+  <p>During recycling, the technology parameters govern how much each state variable is restored toward virgin. Higher ρ technologies (chemical recycling) pull more strongly toward virgin chain length and lamellar structure.</p>
+  <div class="eq">m̄_r = clamp( m̄_u · exp(−β_r) · (1−ρ) + 1.0 · ρ )
+<span class="c">// ρ: chain restoration efficiency. Chemical recycling (ρ=0.90) near-fully restores Mw.</span>
+<span class="c">// Mechanical recycling (ρ=0.55) gives modest restoration. (Refs: Spinacé & De Paoli 2001)</span>
+
+Xc_r = clamp( (Xc_u·(1−f_m) + Xc₀·f_m + k_r·(Xc_max−Xc_u)) · (1−ρ) + Xc₀·ρ )
+<span class="c">// f_m: melt memory. k_r: recrystallization rate. ρ blends toward virgin Xc.</span>
+
+Ci_r = clamp( Ci_u · (1 − φ) ) &nbsp;<span class="c">// φ: purification efficiency</span>
+
+lc_r = clamp( (lc_u·(1−f_m) + lc₀·f_m) · (1−ρ) + lc₀·ρ )
+<span class="c">// Melt reset (f_m) and restoration (ρ) both pull lc back toward virgin thickness</span></div>
+
+  <h3>3.3 Virgin Blending</h3>
+  <div class="eq">m̄_b = λ·1.0 + (1−λ)·m̄_r
+Xc_b = λ·Xc₀ + (1−λ)·Xc_r
+Ci_b = (1−λ)·Ci_r
+lc_b = λ·lc₀ + (1−λ)·lc_r &nbsp;<span class="c">// λ ∈ [0, 0.5]: virgin blend fraction</span></div>
+
+  <h2>4. Physical Property Formulas</h2>
+  <p>All 8 properties are normalized to [0,1] relative to their virgin state and derived deterministically from the 4 state variables. The formulas are selected to reflect the dominant physical mechanism for each property as established in the polymer science literature.</p>
+
+  <h3>4.1 Tensile Strength — Lake-Thomas Theory</h3>
+  <p>Replaces the naive √m̄ heuristic. The Lake-Thomas fracture model (Lake & Thomas 1967, validated by Ducrot et al. 2014) shows tensile strength drops to near zero below the critical entanglement Mw (Mc). The (1−Mc/m̄) form captures this sharp threshold correctly.</p>
+  <div class="eq">σ_T = clamp( (1 − Mc/max(Mc, m̄)) · (1 + k_s·ΔXc) · (1−Ci)^γ_s )
+<span class="c">// Mc: critical entanglement Mw (polymer-specific, measurable by rheology)</span>
+<span class="c">// k_s: crystallinity stiffening coefficient. γ_s: contamination sensitivity exponent.</span></div>
+
+  <h3>4.2 Elongation at Break — Reptation + Tie Molecule Density</h3>
+  <p>Elongation requires both long chains (Reptation theory, de Gennes 1971) and amorphous bridging chains between lamellae (tie molecules). Tie molecule density ρ_tie = (1−Xc)/Xc — more amorphous phase relative to crystalline phase means more bridging chains and greater ductility (Ref: Seguela 2007).</p>
+  <div class="eq">ε_b = clamp( m̄^1.5 · (amF/amF₀)^β_e · (ρ_tie/ρ_tie₀)^0.5 · (1−Ci) )
+  amF = 1−Xc &nbsp;<span class="c">// amorphous fraction</span>
+  ρ_tie = (1−Xc)/Xc &nbsp;<span class="c">// tie molecule density proxy</span>
+<span class="c">// m̄^1.5 from Reptation theory. β_e=2.0–2.8 (polymer-specific).</span></div>
+
+  <h3>4.3 Elastic Modulus — Two-Phase Rule of Mixtures</h3>
+  <p>Standard two-phase ROM for semicrystalline polymers (Voigt/Reuss bounds). The crystalline phase is rE=3–4× stiffer than the amorphous phase. Contamination softens the matrix via a dilution effect (Ref: Fritsch et al. 2021, ACS Macromolecules).</p>
+  <div class="eq">E_raw = ((1−Xc) + rE·Xc) / E₀ &nbsp;<span class="c">// rE: crystalline/amorphous stiffness ratio</span>
+E = clamp( E_raw · (1 − 0.15·(1−m̄)²) · (1 − 0.5·Ci) )</div>
+
+  <h3>4.4 Impact Resistance — Ductile-Brittle Transition</h3>
+  <p>Impact requires both long chains AND low crystallinity simultaneously. The ductility factor xF = 1−Xc/Xc_max approaches zero as the polymer becomes fully crystalline — the ductile-to-brittle transition. Lamellar thickness contributes via energy absorption at crystallite-amorphous interfaces (Ref: Humbert et al. 2011).</p>
+  <div class="eq">G_c = clamp( m̄^0.5 · (xF/xF₀)² · √(lc/lc₀) · (1−Ci) )
+  xF = 1 − Xc/Xc_max &nbsp;<span class="c">// ductility factor: → 0 at max crystallinity</span></div>
+
+  <h3>4.5 MFR Processability — 3.4 Power Law</h3>
+  <p>The most theoretically rigorous formula in the model. Zero-shear viscosity scales as η₀ ∝ Mw^3.4 for entangled linear polymers (Ferry 1980, confirmed by numerous experimental studies). MFR ∝ 1/η₀ hence the inverse 3.4 dependence. This is the steepest property drop — even modest chain shortening dramatically increases viscosity.</p>
+  <div class="eq">MFR = clamp( m̄^3.4 / (1 + 2·Ci) )
+<span class="c">// 3.4 power law: textbook entanglement theory (Ferry 1980)</span>
+<span class="c">// (1+2Ci) denominator: contamination increases effective viscosity</span></div>
+
+  <h3>4.6 Hardness — Linear Rule of Mixtures</h3>
+  <p>Hardness scales linearly with crystallinity in semicrystalline polyolefins — a well-established experimental observation (Peacock 2000). The composite hardness is the volume-weighted average of amorphous (H_am) and crystalline (H_cryst) phase hardnesses, both measurable by nanoindentation.</p>
+  <div class="eq">H = clamp( ((1−Xc)·H_am + Xc·H_cryst) / H₀ · (1 − 0.08·(1−m̄)²) )
+  H₀ = (1−Xc₀)·H_am + Xc₀·H_cryst &nbsp;<span class="c">// virgin hardness normalization</span>
+<span class="c">// H_am, H_cryst: polymer-specific, measurable by nanoindentation</span></div>
+
+  <h3>4.7 Flexural Modulus</h3>
+  <p>Derived from elastic modulus with a Langmuir-type contamination penalty. The saturation form Ci/(1+Ci) is physically appropriate — contaminant effects saturate at high loading rather than growing linearly without bound.</p>
+  <div class="eq">E_flex = clamp( E_tensile · (1 − 0.6·Ci/(1+Ci)) )</div>
+
+  <h3>4.8 Creep Resistance — Entanglement + Lamellar Stability</h3>
+  <p>Creep in semicrystalline polymers is controlled by two mechanisms: (1) chain entanglement density ∝ Mw^1.5, and (2) crystallite stability under stress — thicker, more numerous lamellae resist chain disentanglement (Ref: Pan et al. 2024, Polymer; Strobl 1996). This is why pipe-grade HDPE maintains exceptional creep resistance — high Xc and large lc, not just high Mw.</p>
+  <div class="eq">J_cr⁻¹ = clamp( m̄^1.5 · (Xc/Xc₀)^0.5 · (lc/lc₀) · (1 − 1.5·Ci) )
+<span class="c">// m̄^1.5: entanglement density (Reptation theory)</span>
+<span class="c">// (Xc/Xc₀)^0.5: crystalline fraction contribution</span>
+<span class="c">// lc/lc₀: lamellar thickness — the key differentiator for pipe vs. packaging</span></div>
+
+  <h2>5. Composite Quality Index Q</h2>
+  <div class="eq">Q = Q_weighted · Q_gate
+Q_weighted = Σ(w_k · P_k) / Σ(w_k) &nbsp;<span class="c">// application-weighted average</span>
+Q_gate = Π_k min(1, P_crit,k / 0.3) &nbsp;<span class="c">// multiplicative penalty if critical property < 30%</span></div>
+  <p>Q is computed identically for both use and recycle phases — always flowing through the full props() → computeQ() pipeline. Application-specific weights and critical properties are user-tunable in Settings.</p>
+
+  <h2>6. Economic & Environmental Accounting</h2>
+  <h3>6.1 Use Phase</h3>
+  <div class="eq">ΔE_u = E_use + grid·0.05·(1 + Ci) &nbsp;<span class="c">// contamination increases handling energy</span>
+ΔC_u = C_sort·(1 + Ci) &nbsp;<span class="c">// contamination increases collection cost</span></div>
+
+  <h3>6.2 Recycle Phase</h3>
+  <div class="eq">ΔE_r = ε / max(0.05, Q·π) + λ·E_virgin
+<span class="c">// ε: technology energy burden. Low Q or purity → more energy per unit restored.</span>
+
+ΔC_r = κ/π + λ·C_virgin − v₀·Q^γ
+<span class="c">// κ: technology processing cost. v₀·Q^γ: revenue from recyclate (superlinear in quality).</span></div>
+
+  <h2>7. Greedy Auto-Selector</h2>
+  <p>At each cycle, the selector evaluates all three technologies and picks the one maximizing economic score while staying in-zone. If no technology can maintain in-zone status, it falls back to rescue mode: maximize Q' at any cost.</p>
+  <div class="eq">Score(θ) = −(ΔC_r(θ) + σ_carbon · ΔE_r(θ))
+<span class="c">// σ_carbon: carbon price [USD/kgCO₂]. Default 0.05.</span>
+
+Pseudocode:
+  for θ in {Mechanical, Solvent, Chemical}:
+    simulate step → Q', ΔE, ΔC
+    if in-zone: select max Score(θ)       // cost-optimal
+    else: select max Q'                   // rescue mode</div>
+
+  <h2>8. Parameter Reference</h2>
+  <h3>Polymer Parameters</h3>
+  <table class="dtbl">
+    <tr><th>Polymer</th><th>β_u</th><th>β_r</th><th>Xc₀</th><th>Mc</th><th>lc₀ (nm)</th></tr>
+    <tr><td>HDPE</td><td>0.08</td><td>0.12</td><td>0.45</td><td>0.05</td><td>25</td></tr>
+    <tr><td>PET</td><td>0.22</td><td>0.18</td><td>0.25</td><td>0.12</td><td>10</td></tr>
+    <tr><td>PP</td><td>0.12</td><td>0.15</td><td>0.35</td><td>0.08</td><td>15</td></tr>
+    <tr><td>PLA</td><td>0.35</td><td>0.28</td><td>0.15</td><td>0.18</td><td>8</td></tr>
+    <tr><td>LDPE</td><td>0.10</td><td>0.13</td><td>0.20</td><td>0.06</td><td>12</td></tr>
+  </table>
+  <h3>Technology Parameters</h3>
+  <table class="dtbl">
+    <tr><th>Technology</th><th>ρ</th><th>φ</th><th>β_r</th><th>f_m</th><th>ε</th><th>κ</th></tr>
+    <tr><td>Mechanical</td><td>0.55</td><td>0.00</td><td>0.12</td><td>0.60</td><td>0.40</td><td>0.25</td></tr>
+    <tr><td>Solvent</td><td>0.75</td><td>0.70</td><td>0.02</td><td>0.80</td><td>0.80</td><td>0.60</td></tr>
+    <tr><td>Chemical</td><td>0.90</td><td>0.95</td><td>0.00</td><td>1.00</td><td>1.80</td><td>1.20</td></tr>
+  </table>
 </div>
-
-<h2>1. The Operating Zone Cuboid</h2>
-<p>The feasible operating region is defined as a rectangular cuboid in state space:</p>
-<div class="eq"><span class="sym">Z</span> = { <span class="sym">s</span> ∈ ℝ³ | <span class="sym">E</span> ≤ <span class="sym">E</span><sub>max</sub>, <span class="sym">C</span> ≤ <span class="sym">C</span><sub>max</sub>, <span class="sym">Q</span> ≥ <span class="sym">Q</span><sub>min</sub> }<span class="dim">
-<br>E_max ∈ [5, 80] kg CO₂eq/kg (user-defined)
-<br>C_max ∈ [1, 30] USD/kg (user-defined)
-<br>Q_min ∈ [0.1, 0.9] (user-defined)</span></div>
-
-<table class="param-table">
-<tr><th>Parameter</th><th>Typical Range</th><th>Physical Meaning</th></tr>
-<tr><td>E_max</td><td>25 kg CO₂eq/kg</td><td>Corporate sustainability target</td></tr>
-<tr><td>C_max</td><td>8 USD/kg</td><td>Procurement willingness to pay</td></tr>
-<tr><td>Q_min</td><td>0.35</td><td>Minimum mechanical performance threshold</td></tr>
-</table>
-
-<h2>2. Internal State Evolution</h2>
-<p>Three root-cause variables drive all macroscopic behavior:</p>
-
-<div class="eq">
-<div><span class="sym">s</span><sub>internal</sub> = [<span class="sym">m̄</span>, <span class="sym">Xc</span>, <span class="sym">Ci</span>]</div>
-<span class="dim">
-m̄  ∈ [0,1] = M_w(n) / M_w(0)  (normalized weight-average molecular weight)
-<br>Xc ∈ [0, Xc_max]  (crystallinity fraction)
-<br>Ci ∈ [0,1]  (mass fraction of foreign contaminants)
-<br>π = 1 − Ci  (purity)</span>
-</div>
-
-<h3>2.1 Use Phase Physics</h3>
-
-<div class="eq">
-<span class="sym">m̄</span><sub>u</sub> = clamp(<span class="sym">m̄</span> · exp(−<span class="sym">β</span><sub>u</sub> · (1 + <span class="sym">Ci</span>)) · (1 + σ · 𝒩(0,1)))<span class="dim">
-<br>β_u ∈ [0, 0.5] cycle⁻¹  (use-phase chain scission rate)
-<br>σ ∈ [0, 0.12]  (stochastic noise scale)</span>
-</div>
-
-<div class="eq">
-<span class="sym">Xc</span><sub>u</sub> = clamp(<span class="sym">Xc</span> + Δ<span class="sym">Xc</span><sup>G</sup> − Δ<span class="sym">Xc</span><sup>D</sup> + σ · 𝒩(0,1))<span class="dim">
-<br>ΔXc^G = 0.12 · (Xc_max − Xc)  (growth toward equilibrium crystallinity)
-<br>ΔXc^D = 0.08 · (1 − m̄)²  (crack-induced amorphization)</span>
-</div>
-
-<div class="eq">
-<span class="sym">Ci</span><sub>u</sub> = clamp(<span class="sym">Ci</span> + <span class="sym">k</span> · (1 − <span class="sym">Ci</span>) · (1 + σ · 𝒩(0,1)))<span class="dim">
-<br>k ∈ [0, 0.3] cycle⁻¹  (logistic contamination growth rate)</span>
-</div>
-
-<h3>2.2 Recycle Phase Physics</h3>
-
-<div class="eq">
-<span class="sym">m̄</span><sub>r</sub> = clamp(<span class="sym">m̄</span><sub>u</sub> · exp(−<span class="sym">β</span><sub>r</sub>) · (1 + σ · 𝒩(0,1)))<span class="dim">
-<br>β_r ∈ [0, 0.5] cycle⁻¹  (melt processing chain scission)</span>
-</div>
-
-<div class="eq">
-<span class="sym">Xc</span><sub>r</sub> = clamp(<span class="sym">Xc</span><sub>u</sub> · (1 − <span class="sym">f</span><sub>m</sub>) + <span class="sym">Xc</span><sub>0</sub> · <span class="sym">f</span><sub>m</sub> + <span class="sym">k</span><sub>r</sub> · (<span class="sym">Xc</span><sub>max</sub> − <span class="sym">Xc</span><sub>u</sub>) + σ · 𝒩(0,1))<span class="dim">
-<br>f_m ∈ [0,1]  (melt memory factor)
-<br>k_r ∈ [0.05, 0.15]  (recrystallization rate)</span>
-</div>
-
-<div class="eq">
-<span class="sym">Ci</span><sub>r</sub> = clamp(<span class="sym">Ci</span><sub>u</sub> · (1 − <span class="sym">φ</span>) · (1 + σ · 𝒩(0,1)))<span class="dim">
-<br>φ ∈ [0,1]  (purification efficiency)</span>
-</div>
-
-<h3>2.3 Virgin Blending</h3>
-<div class="eq">
-<span class="sym">m̄</span><sub>b</sub> = λ · 1.0 + (1 − λ) · <span class="sym">m̄</span><sub>r</sub><span class="dim">
-<br>Xc_b = λ · Xc₀ + (1 − λ) · Xc_r
-<br>Ci_b = (1 − λ) · Ci_r
-<br>λ ∈ [0, 0.5]  (virgin fraction)</span>
-</div>
-
-<h2>3. Composite Quality Index Q</h2>
-
-<div class="eq">
-<span class="sym">Q</span> = <span class="sym">Q</span><sub>weighted</sub> · <span class="sym">Q</span><sub>gate</sub><span class="dim">
-<br>Q_weighted = Σ(w_k · P_k) / Σ(w_k)  (weighted average of 8 properties)
-<br>Q_gate = Π(P_crit,k / 0.3)  (critical property gate)</span>
-</div>
-
-<h4>Physical Properties P_k</h4>
-
-<table class="param-table">
-<tr><th>Property</th><th>Equation</th><th>Key Exponents</th></tr>
-<tr><td>Tensile Strength</td><td>σ ∝ √m̄ · (1 + k_s · ΔXc) · (1−Ci)^γ_s</td><td>γ_s=1.5, k_s∈[0.08,0.15]</td></tr>
-<tr><td>Elongation</td><td>ε_b ∝ m̄^1.5 · (amorphous_frac)^β_e · (1−Ci)</td><td>β_e=2.0–2.8</td></tr>
-<tr><td>Modulus</td><td>E_raw · (1 − 0.15(1−m̄)²) · (1 − 0.5Ci)</td><td>Non-monotonic in Xc</td></tr>
-<tr><td>Impact</td><td>m̄^0.5 · (xF/xF₀)² · (1−Ci)</td><td>xF = 1 − Xc/Xc_max</td></tr>
-<tr><td>MFR</td><td>m̄^3.4 / (1 + 2Ci)</td><td><b>3.4 power law</b> (steepest drop)</td></tr>
-<tr><td>Hardness</td><td>√(Xc/Xc₀) · (1 − 0.12(1−m̄)²)</td><td>-</td></tr>
-<tr><td>Flexural</td><td>Modulus · √(1 − 1.2Ci)</td><td>-</td></tr>
-<tr><td>Creep</td><td>m̄^1.5 · (1 − 1.5Ci)</td><td>-</td></tr>
-</table>
-
-<h2>4. Economic & Environmental Accounting</h2>
-
-<h3>4.1 Use Phase Costs</h3>
-<div class="eq">
-Δ<span class="sym">E</span><sub>u</sub> = <span class="sym">E</span><sub>use</sub> + <span class="sym">grid</span> · 0.05 · (1 + <span class="sym">Ci</span>)<span class="dim">
-<br>E_use ∈ [0,1] kgCO₂/kg  (application-specific)
-<br>grid ∈ [0.05,0.9] kgCO₂/kWh</span>
-</div>
-
-<div class="eq">
-Δ<span class="sym">C</span><sub>u</sub> = <span class="sym">C</span><sub>sort</sub> · (1 + <span class="sym">Ci</span>)<span class="dim">
-<br>C_sort ∈ [0,1] USD/kg  (collection cost)</span>
-</div>
-
-<h3>4.2 Recycle Phase Costs</h3>
-<div class="eq">
-Δ<span class="sym">E</span><sub>r</sub> = <span class="sym">ε</span> / max(0.05, <span class="sym">Q</span> · <span class="sym">π</span>) + λ · <span class="sym">E</span><sub>virgin</sub><span class="dim">
-<br>ε ∈ [0.1, 5] kgCO₂/kg  (technology energy burden)
-<br>E_virgin ∈ [0.5, 5] kgCO₂/kg</span>
-</div>
-
-<div class="eq">
-Δ<span class="sym">C</span><sub>r</sub> = <span class="sym">κ</span> / <span class="sym">π</span> + λ · <span class="sym">C</span><sub>virgin</sub> − <span class="sym">v</span><sub>0</sub> · <span class="sym">Q</span><sup>γ</sup><span class="dim">
-<br>κ ∈ [0.1, 5] USD/kg  (technology cost)
-<br>v₀ ∈ [0.1, 2] USD/kg  (recyclate price at Q=1)
-<br>γ ∈ [0.5, 3]  (revenue quality exponent, superlinear)
-<br>C_virgin ∈ [0.3, 3] USD/kg</span>
-</div>
-
-<h2>5. Greedy Auto-Selector Algorithm</h2>
-<div class="eq">
-Cost_Score(θ) = −(Δ<span class="sym">C</span><sub>r</sub>(θ) + <span class="sym">σ</span><sub>carbon</sub> · Δ<span class="sym">E</span><sub>r</sub>(θ))<span class="dim">
-<br>σ_carbon ∈ [0, 0.3] USD/kgCO₂</span>
-</div>
-
-<p><b>Pseudocode:</b></p>
-<pre style="background:#161b22;padding:1rem;border-radius:6px;font-size:.85rem;overflow:auto">
-for each available technology θ:
-  Simulate recycle step → s', Q', ΔE, ΔC
-  if (Q' ≥ Q_min AND E+ΔE ≤ E_max AND C+ΔC ≤ C_max):
-    Select θ with maximum Cost_Score(θ)
-  else:
-    Select θ with maximum Q' (rescue mode)
-</pre>
-
-<h2>6. Recyclability Half-Life τ<sub>1/2</sub></h2>
-<div class="eq">
-τ<sub>1/2</sub> = min{ n | Pr[all states s₀...sₙ ∈ Z] ≤ 0.5 }<span class="dim">
-<br>Computed via Monte Carlo (N=1–20 trajectories)</span>
-</div>
-
-<div class="section-break"></div>
-
-<h2>Parameter Reference Tables</h2>
-
-<h3>Polymer-Specific Parameters</h3>
-<table class="param-table">
-<tr><th>Polymer</th><th>β_u</th><th>β_r</th><th>Xc₀</th><th>Xc_max</th></tr>
-<tr><td>HDPE</td><td>0.08</td><td>0.12</td><td>0.45</td><td>0.65</td></tr>
-<tr><td>PET</td><td><b>0.22</b></td><td>0.18</td><td>0.25</td><td>0.45</td></tr>
-<tr><td>PP</td><td>0.12</td><td>0.15</td><td>0.35</td><td>0.55</td></tr>
-<tr><td>PLA</td><td><b>0.35</b></td><td>0.28</td><td>0.15</td><td>0.45</td></tr>
-<tr><td>LDPE</td><td>0.10</td><td>0.13</td><td>0.20</td><td>0.35</td></tr>
-</table>
-
-<h3>Application-Specific Parameters</h3>
-<table class="param-table">
-<tr><th>Application</th><th>E_use</th><th>C_sort</th><th>k_contam</th></tr>
-<tr><td>Food Packaging</td><td>0.05</td><td>0.08</td><td>0.08</td></tr>
-<tr><td>Pressure Pipe</td><td>0.02</td><td>0.15</td><td><b>0.04</b></td></tr>
-<tr><td>Structural Part</td><td>0.08</td><td>0.12</td><td>0.06</td></tr>
-<tr><td>Textile Fibre</td><td>0.10</td><td>0.20</td><td><b>0.15</b></td></tr>
-</table>
-
-<h3>Technology Comparison</h3>
-<table class="param-table">
-<tr><th>Technology</th><th>ρ</th><th>φ</th><th>ε</th><th>κ</th></tr>
-<tr><td>Mechanical</td><td>0.55</td><td>0.00</td><td>0.40</td><td>0.25</td></tr>
-<tr><td>Solvent</td><td>0.75</td><td><b>0.70</b></td><td>0.80</td><td>0.60</td></tr>
-<tr><td>Chemical</td><td><b>0.90</b></td><td><b>0.95</b></td><td>1.80</td><td>1.20</td></tr>
-</table>
 
 </div>
 </div>
