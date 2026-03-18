@@ -160,6 +160,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
       <div class="pill"><b>Ci </b><span id="pill-ci">0.020</span></div>
       <div class="pill"><b>π </b><span id="pill-pi">0.980</span></div>
       <div class="pill"><b>λ </b><span id="pill-lam">0.000</span></div>
+      <div class="pill"><b>lc </b><span id="pill-lc">—</span></div>
     </div>
   </div>
 
@@ -908,6 +909,7 @@ function updateGauges(idx){
   document.getElementById('pill-pi').textContent=pi.toFixed(3);
   const lam=s0.lam||0;
   document.getElementById('pill-lam').textContent=lam.toFixed(3);
+  document.getElementById('pill-lc').textContent = am('lc').toFixed(1) + ' nm';
 
   const ciP=Math.round(ci*100);
   document.getElementById('ciFill').style.width=ciP+'%';
