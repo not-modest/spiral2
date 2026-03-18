@@ -587,14 +587,13 @@ function loadTechEd(){
 function loadPolyEd(){
   const p=POLY[document.getElementById('ed-poly').value];
   ['bu','br','mc','ham','hcryst','lc0'].forEach(k=>{
-  const el=document.getElementById('ed-'+k);
-  if(!el)return;
-  el.addEventListener('input',e=>{
-    const v=parseFloat(e.target.value);
-    document.getElementById('ed-v-'+k).textContent=k==='lc0'?parseInt(v):v.toFixed(2);
-    POLY[document.getElementById('ed-poly').value][k]=v;
+    const el=document.getElementById('ed-'+k);
+    const vel=document.getElementById('ed-v-'+k);
+    if(el&&vel){
+      el.value=p[k];
+      vel.textContent=k==='lc0'?parseInt(p[k]):p[k].toFixed(2);
+    }
   });
-});
 }
 function loadAppEd(){
   const a=APPS[document.getElementById('ed-app').value];
@@ -620,10 +619,12 @@ document.getElementById('ed-tech').addEventListener('change',loadTechEd);
 });
 
 document.getElementById('ed-poly').addEventListener('change',loadPolyEd);
-['bu','br'].forEach(k=>{
-  document.getElementById('ed-'+k).addEventListener('input',e=>{
+['bu','br','mc','ham','hcryst','lc0'].forEach(k=>{
+  const el=document.getElementById('ed-'+k);
+  if(!el)return;
+  el.addEventListener('input',e=>{
     const v=parseFloat(e.target.value);
-    document.getElementById('ed-v-'+k).textContent=v.toFixed(2);
+    document.getElementById('ed-v-'+k).textContent=k==='lc0'?parseInt(v):v.toFixed(2);
     POLY[document.getElementById('ed-poly').value][k]=v;
   });
 });
