@@ -250,7 +250,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
     <div class="row"><label data-tip="Fraction of theoretical max quality restored. (0=none, 1=perfect)">Restoration eff (ρ)</label><input type="range" id="ed-rho" min="0" max="1" step="0.01"><span class="rval" id="ed-v-rho"></span></div>
     <div class="row"><label data-tip="Fraction of contamination removed. (0=none, 1=100% pure)">Purification eff (φ)</label><input type="range" id="ed-phi" min="0" max="1" step="0.01"><span class="rval" id="ed-v-phi"></span></div>
     <div class="row"><label data-tip="Inherent energy emissions for the process (kgCO2/kg)">Energy burden (ε)</label><input type="range" id="ed-eps" min="0.1" max="5" step="0.1"><span class="rval" id="ed-v-eps"></span></div>
-    <div class="row"><label data-tip="Base economic cost to run the process (USD/kg)">Economic cost (κ)</label><input type="range" id="ed-kap" min="0.1" max="5" step="0.1"><span class="rval" id="ed-v-kap"></span></div>
+    <div class="row"><label data-tip="Base economic cost to run the process (USD/kg)">Economic cost (κ)</label><input type="range" id="ed-kap" min="0.1" max="5" step="0.1"><span class="rval" id="ed-v-kap"></span></div>Melt scission (β_r) <span id="ed-v-tbr">0.12</span><input type="range" id="ed-tbr" min="0" max="0.3" step="0.01">
   </div>
 
   <div class="setcard" style="border-color:var(--purple)">
@@ -265,6 +265,17 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
     </select>
     <div class="row"><label data-tip="Rate of chain scission during the use phase (UV/thermal)">Use-phase scission (β_u)</label><input type="range" id="ed-bu" min="0" max="0.5" step="0.01"><span class="rval" id="ed-v-bu"></span></div>
     <div class="row"><label data-tip="Rate of chain scission during recycling melt extrusion">Melt scission (β_r)</label><input type="range" id="ed-br" min="0" max="0.5" step="0.01"><span class="rval" id="ed-v-br"></span></div>
+    Critical Mw (Mc) <span id="ed-v-mc">0.05</span>
+  <input type="range" id="ed-mc" min="0.01" max="0.3" step="0.01">
+
+  Amorphous hardness (H_am) <span id="ed-v-ham">0.25</span>
+  <input type="range" id="ed-ham" min="0.1" max="0.6" step="0.01">
+
+  Crystalline hardness (H_cryst) <span id="ed-v-hcryst">0.85</span>
+  <input type="range" id="ed-hcryst" min="0.5" max="1.0" step="0.01">
+
+  Lamellar thickness (lc₀ nm) <span id="ed-v-lc0">25</span>
+  <input type="range" id="ed-lc0" min="5" max="50" step="1">
   </div>
 
   <div class="setcard" style="border-color:var(--orange)">
@@ -567,17 +578,23 @@ let CFG={
 // ═══════════════════ EDITOR BINDINGS ═══════════════════
 function loadTechEd(){
   const t=TECH[document.getElementById('ed-tech').value];
-  ['rho','phi','eps','kap'].forEach(k=>{
-    document.getElementById('ed-'+k).value=t[k];
-    document.getElementById('ed-v-'+k).textContent=t[k].toFixed(2);
+  ['rho','phi','eps','kap','tbr'].forEach(k=>{
+    const key=k==='tbr'?'br':k;
+    document.getElementById('ed-'+k).value=t[key];
+    document.getElementById('ed-v-'+k).textContent=t[key].toFixed(2);
   });
 }
 function loadPolyEd(){
   const p=POLY[document.getElementById('ed-poly').value];
-  ['bu','br'].forEach(k=>{
-    document.getElementById('ed-'+k).value=p[k];
-    document.getElementById('ed-v-'+k).textContent=p[k].toFixed(2);
+  ['bu','br','mc','ham','hcryst','lc0'].forEach(k=>{
+  const el=document.getElementById('ed-'+k);
+  if(!el)return;
+  el.addEventListener('input',e=>{
+    const v=parseFloat(e.target.value);
+    document.getElementById('ed-v-'+k).textContent=k==='lc0'?parseInt(v):v.toFixed(2);
+    POLY[document.getElementById('ed-poly').value][k]=v;
   });
+});
 }
 function loadAppEd(){
   const a=APPS[document.getElementById('ed-app').value];
@@ -593,11 +610,12 @@ function loadAppEd(){
 }
 
 document.getElementById('ed-tech').addEventListener('change',loadTechEd);
-['rho','phi','eps','kap'].forEach(k=>{
+['rho','phi','eps','kap','tbr'].forEach(k=>{
   document.getElementById('ed-'+k).addEventListener('input',e=>{
     const v=parseFloat(e.target.value);
     document.getElementById('ed-v-'+k).textContent=v.toFixed(2);
-    TECH[document.getElementById('ed-tech').value][k]=v;
+    const key=k==='tbr'?'br':k;
+    TECH[document.getElementById('ed-tech').value][key]=v;
   });
 });
 
