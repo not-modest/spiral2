@@ -665,7 +665,7 @@ function computeQ(pr,w,crit){
 function runRecycleStep(sU, QU, E, C, p, t, noise, w, crit){
   const m_r=cl(sU.m*Math.exp(-t.br)*(1+noise*randn()*.08));
   const Xcm2=sU.Xc*(1-t.fm)+p.Xc0*t.fm;
-  const Xc_r=cl(sU.m * Math.exp(-t.br) * (1 + t.rho * 0.15) * (1 + noise*randn()*.08));;
+  const Xc_r=cl(sU.Xc*(1-t.fm) + p.Xc0*t.fm + t.kr*(p.Xcm-sU.Xc) + noise*randn()*.012, 0, p.Xcm);
   const Ci_r=cl(sU.Ci*(1-t.phi)*(1+noise*randn()*.08));
 
   const lam=CFG.lam;
