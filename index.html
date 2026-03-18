@@ -537,11 +537,11 @@ for each available technology θ:
 <script>
 // ═══════════════════ DATA ═══════════════════
 const POLY={
-  hdpe:{name:'HDPE',bu:0.08,br:0.12,Xc0:.45,Xcm:.65,rE:4.0,ks:.10,gs:1.5,be:2.0},
-  pet: {name:'PET', bu:0.22,br:0.18,Xc0:.25,Xcm:.45,rE:3.5,ks:.08,gs:2.0,be:2.5},
-  pp:  {name:'PP',  bu:0.12,br:0.15,Xc0:.35,Xcm:.55,rE:3.8,ks:.12,gs:1.8,be:2.2},
-  pla: {name:'PLA', bu:0.35,br:0.28,Xc0:.15,Xcm:.45,rE:3.2,ks:.15,gs:2.2,be:2.8},
-  ldpe:{name:'LDPE',bu:0.10,br:0.13,Xc0:.20,Xcm:.35,rE:3.0,ks:.09,gs:1.6,be:2.1}
+  hdpe:{name:'HDPE',bu:0.08,br:0.12,Xc0:.45,Xcm:.65,rE:4.0,ks:.10,gs:1.5,be:2.0, Mc:0.05, Ham:0.25, Hcryst:0.85},
+  pet: {name:'PET', bu:0.22,br:0.18,Xc0:.25,Xcm:.45,rE:3.5,ks:.08,gs:2.0,be:2.5, Mc:0.12, Ham:0.35, Hcryst:0.90},
+  pp:  {name:'PP',  bu:0.12,br:0.15,Xc0:.35,Xcm:.55,rE:3.8,ks:.12,gs:1.8,be:2.2, Mc:0.08, Ham:0.28, Hcryst:0.82},
+  pla: {name:'PLA', bu:0.35,br:0.28,Xc0:.15,Xcm:.45,rE:3.2,ks:.15,gs:2.2,be:2.8, Mc:0.18, Ham:0.30, Hcryst:0.78},
+  ldpe:{name:'LDPE',bu:0.10,br:0.13,Xc0:.20,Xcm:.35,rE:3.0,ks:.09,gs:1.6,be:2.1, Mc:0.06, Ham:0.20, Hcryst:0.75}
 };
 const TECH={
   mechanical:    {name:'Mechanical',   rho:.55,phi:.00,br:.12,fm:.60,kr:.15,eps:.40,kap:.25},
@@ -633,7 +633,8 @@ function cl(x,lo=0,hi=1){return Math.max(lo,Math.min(hi,x))}
 
 function props(s,p){
   const dXc=s.Xc-p.Xc0;
-  const ten=cl(Math.pow(s.m,.5)*(1+p.ks*dXc)*Math.pow(cl(1-s.Ci),p.gs));
+  const ltFactor = Math.max(0, 1 - p.Mc / Math.max(p.Mc, s.m));
+  const ten = cl(ltFactor*(1+p.ks*dXc)*Math.pow(cl(1-s.Ci),p.gs));
   const amF0=Math.max(.01,1-p.Xc0),amF=Math.max(0,1-s.Xc);
   const elo=cl(Math.pow(s.m,1.5)*Math.pow(amF/amF0,p.be)*cl(1-s.Ci));
   const E0d=(1-p.Xc0)+p.rE*p.Xc0;
@@ -643,9 +644,11 @@ function props(s,p){
   const xF0=Math.max(.01,1-p.Xc0/p.Xcm),xF=Math.max(0,1-s.Xc/p.Xcm);
   const imp=cl(Math.pow(s.m,.5)*Math.pow(xF/xF0,2)*cl(1-s.Ci));
   const mfr=cl(Math.pow(s.m,3.4)/(1+2*s.Ci));
-  const hrd=cl(Math.sqrt(p.Xc0>0?s.Xc/p.Xc0:1)*(1-.12*Math.pow(1-s.m,2)));
-  const flx=cl(mod*Math.sqrt(Math.max(0,1-1.2*s.Ci)));
-  const crp=cl(Math.pow(s.m,1.5)*(1-1.5*s.Ci));
+  const hrdRaw = ((1-s.Xc)*p.Ham + s.Xc*p.Hcryst);
+  const hrd0   = ((1-p.Xc0)*p.Ham + p.Xc0*p.Hcryst);
+  const hrd = cl((hrdRaw/hrd0)*(1 - 0.08*Math.pow(1-s.m,2)));
+  const flx = cl(mod*(1 - 0.6*s.Ci/(1+s.Ci)));
+  const crp = cl(Math.pow(s.m,1.5) * Math.pow(s.Xc/p.Xc0, 0.5) * (1-1.5*s.Ci));
   return{tensile:ten,elong:elo,modulus:mod,impact:imp,mfr,hardness:hrd,flexural:flx,creep:crp};
 }
 
@@ -659,10 +662,10 @@ function computeQ(pr,w,crit){
   return cl(avg*gate);
 }
 
-function runRecycleStep(sU, QU, E, C, p, t, noise){
+function runRecycleStep(sU, QU, E, C, p, t, noise, w, crit){
   const m_r=cl(sU.m*Math.exp(-t.br)*(1+noise*randn()*.08));
   const Xcm2=sU.Xc*(1-t.fm)+p.Xc0*t.fm;
-  const Xc_r=cl(Xcm2+t.kr*(p.Xcm-Xcm2)+noise*randn()*.01,0,p.Xcm);
+  const Xc_r=cl(sU.m * Math.exp(-t.br) * (1 + t.rho * 0.15) * (1 + noise*randn()*.08));;
   const Ci_r=cl(sU.Ci*(1-t.phi)*(1+noise*randn()*.08));
 
   const lam=CFG.lam;
@@ -672,7 +675,7 @@ function runRecycleStep(sU, QU, E, C, p, t, noise){
   const sR={m:m_b,Xc:Xc_b,Ci:Ci_b};
   const prR=props(sR,p);
   const pi_r=Math.max(.01,1-Ci_b);
-  const QR=cl(QU*(1-t.rho)+t.rho*Math.pow(m_b,.4)*Math.pow(pi_r,.3));
+  const QR=computeQ(prR, w, crit);
 
   const dEr=t.eps/Math.max(.05,QU*Math.max(.01,1-sU.Ci))+lam*CFG.ve;
   const dCr=t.kap/Math.max(.01,pi_r)+lam*CFG.vcost - CFG.v0*Math.pow(Math.max(0.01,QR),CFG.gamma);
@@ -728,7 +731,7 @@ function simRun(pk,tk,ak){
 
       Object.keys(TECH).forEach(k => {
         const t = TECH[k];
-        const res = runRecycleStep(sU, QU, E, C, p, t, CFG.noise);
+        const res = runRecycleStep(sU, QU, E, C, p, t, CFG.noise, w, crit);
         const costScore = -(res.dCr + CFG.sigco * res.dEr);
 
         if(res.inR && costScore > bValidScore){ bValidScore = costScore; bValid = {k, res}; }
@@ -739,7 +742,7 @@ function simRun(pk,tk,ak){
       bestRes = winner.res;
       chosenTechName = TECH[winner.k].name;
     } else {
-      bestRes = runRecycleStep(sU, QU, E, C, p, TECH[tk], CFG.noise);
+      bestRes = runRecycleStep(sU, QU, E, C, p, TECH[tk], CFG.noise, w, crit);
       chosenTechName = TECH[tk].name;
     }
 
