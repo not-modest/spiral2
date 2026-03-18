@@ -628,7 +628,7 @@ function props(s,p){
   const xF0=Math.max(.01,1-p.Xc0/p.Xcm),xF=Math.max(0,1-s.Xc/p.Xcm);
   const lcNorm = p.lc0 > 0 ? s.lc / p.lc0 : 1;
   const imp = cl(Math.pow(s.m,.5)*Math.pow(Math.max(0,xF/xF0),2) * Math.sqrt(lcNorm) * (1-s.Ci));
-  const mfr=cl(Math.pow(s.m,3.4)/(1+2*s.Ci));
+  const mfr=cl(Math.pow(s.m,-3.4)*(1+2*s.Ci));
   const hrdRaw = ((1-s.Xc)*p.ham + s.Xc*p.hcryst);
   const hrd0   = ((1-p.Xc0)*p.ham + p.Xc0*p.hcryst);
   const hrd = cl((hrdRaw/hrd0)*(1 - 0.08*Math.pow(1-s.m,2)));
