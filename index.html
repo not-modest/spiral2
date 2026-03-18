@@ -651,7 +651,6 @@ function props(s,p){
   const hrd0   = ((1-p.Xc0)*p.Ham + p.Xc0*p.Hcryst);
   const hrd = cl((hrdRaw/hrd0)*(1 - 0.08*Math.pow(1-s.m,2)));
   const flx = cl(mod*(1 - 0.6*s.Ci/(1+s.Ci)));
-  const lcNorm = p.lc0 > 0 ? s.lc / p.lc0 : 1;
   const crp = cl(Math.pow(s.m,1.5) * Math.pow(s.Xc/p.Xc0, 0.5) * lcNorm * (1-1.5*s.Ci));
   return{tensile:ten,elong:elo,modulus:mod,impact:imp,mfr,hardness:hrd,flexural:flx,creep:crp};
 }
@@ -718,7 +717,7 @@ function simRun(pk,tk,ak){
     const Xc_u=cl(s.Xc+dXcG-dXcD+sg*randn()*.012,0,p.Xcm);
     const lc_u = cl(s.lc * (1 - 0.05*(1-s.m)) * (1 + 0.02*(s.Xc - p.Xc0)), p.lc0*0.3, p.lc0*1.2);
     const Ci_u=cl(s.Ci+a.kcont*(1-s.Ci)*(1+sg*randn()*.25));
-    const sU={m:m_u,Xc:Xc_u,Ci:Ci_u};
+    const sU={m:m_u,Xc:Xc_u,Ci:Ci_u, lc:lc_u};
 
     const prU=props(sU,p);
     const QU=computeQ(prU,w,crit);
