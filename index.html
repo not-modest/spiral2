@@ -549,11 +549,11 @@ for each available technology θ:
 <script>
 // ═══════════════════ DATA ═══════════════════
 const POLY={
-  hdpe:{name:'HDPE',bu:0.08,br:0.12,Xc0:.45,Xcm:.65,rE:4.0,ks:.10,gs:1.5,be:2.0, Mc:0.05, Ham:0.25, Hcryst:0.85, lc0:25},
-  pet: {name:'PET', bu:0.22,br:0.18,Xc0:.25,Xcm:.45,rE:3.5,ks:.08,gs:2.0,be:2.5, Mc:0.12, Ham:0.35, Hcryst:0.90, lc0:10},
-  pp:  {name:'PP',  bu:0.12,br:0.15,Xc0:.35,Xcm:.55,rE:3.8,ks:.12,gs:1.8,be:2.2, Mc:0.08, Ham:0.28, Hcryst:0.82, lc0:15},
-  pla: {name:'PLA', bu:0.35,br:0.28,Xc0:.15,Xcm:.45,rE:3.2,ks:.15,gs:2.2,be:2.8, Mc:0.18, Ham:0.30, Hcryst:0.78, lc0:8},
-  ldpe:{name:'LDPE',bu:0.10,br:0.13,Xc0:.20,Xcm:.35,rE:3.0,ks:.09,gs:1.6,be:2.1, Mc:0.06, Ham:0.20, Hcryst:0.75, lc0:12}
+  hdpe:{name:'HDPE',bu:0.08,br:0.12,Xc0:.45,Xcm:.65,rE:4.0,ks:.10,gs:1.5,be:2.0, mc:0.05, ham:0.25, hcryst:0.85, lc0:25},
+  pet: {name:'PET', bu:0.22,br:0.18,Xc0:.25,Xcm:.45,rE:3.5,ks:.08,gs:2.0,be:2.5, mc:0.12, ham:0.35, hcryst:0.90, lc0:10},
+  pp:  {name:'PP',  bu:0.12,br:0.15,Xc0:.35,Xcm:.55,rE:3.8,ks:.12,gs:1.8,be:2.2, mc:0.08, ham:0.28, hcryst:0.82, lc0:15},
+  pla: {name:'PLA', bu:0.35,br:0.28,Xc0:.15,Xcm:.45,rE:3.2,ks:.15,gs:2.2,be:2.8, mc:0.18, ham:0.30, hcryst:0.78, lc0:8},
+  ldpe:{name:'LDPE',bu:0.10,br:0.13,Xc0:.20,Xcm:.35,rE:3.0,ks:.09,gs:1.6,be:2.1, mc:0.06, ham:0.20, hcryst:0.75, lc0:12}
 };
 const TECH={
   mechanical:    {name:'Mechanical',   rho:.55,phi:.00,br:.12,fm:.60,kr:.15,eps:.40,kap:.25},
@@ -653,7 +653,7 @@ function cl(x,lo=0,hi=1){return Math.max(lo,Math.min(hi,x))}
 
 function props(s,p){
   const dXc=s.Xc-p.Xc0;
-  const ltFactor = Math.max(0, 1 - p.Mc / Math.max(p.Mc, s.m));
+  const ltFactor = Math.max(0, 1 - p.mc / Math.max(p.mc, s.m));
   const ten = cl(ltFactor*(1+p.ks*dXc)*Math.pow(cl(1-s.Ci),p.gs));
   const amF = 1 - s.Xc, amF0 = 1 - p.Xc0;
   const rhoTie = s.Xc > 0 ? amF / s.Xc : 1;
@@ -667,8 +667,8 @@ function props(s,p){
   const lcNorm = p.lc0 > 0 ? s.lc / p.lc0 : 1;
   const imp = cl(Math.pow(s.m,.5)*Math.pow(Math.max(0,xF/xF0),2) * Math.sqrt(lcNorm) * (1-s.Ci));
   const mfr=cl(Math.pow(s.m,3.4)/(1+2*s.Ci));
-  const hrdRaw = ((1-s.Xc)*p.Ham + s.Xc*p.Hcryst);
-  const hrd0   = ((1-p.Xc0)*p.Ham + p.Xc0*p.Hcryst);
+  const hrdRaw = ((1-s.Xc)*p.ham + s.Xc*p.hcryst);
+  const hrd0   = ((1-p.Xc0)*p.ham + p.Xc0*p.hcryst);
   const hrd = cl((hrdRaw/hrd0)*(1 - 0.08*Math.pow(1-s.m,2)));
   const flx = cl(mod*(1 - 0.6*s.Ci/(1+s.Ci)));
   const crp = cl(Math.pow(s.m,1.5) * Math.pow(s.Xc/p.Xc0, 0.5) * lcNorm * (1-1.5*s.Ci));
