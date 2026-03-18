@@ -707,7 +707,8 @@ function simRun(pk,tk,ak){
 
     // ── USE PHASE ──
     const m_u=cl(s.m*Math.exp(-(p.bu*(1+s.Ci)))*(1+sg*randn()*.35));
-    const dXcG=.12*(p.Xcm-s.Xc), dXcD=.08*Math.pow(1-s.m,2);
+    const nucBoost = 1 + 0.4*(1 - s.m);  // shorter chains nucleate faster
+    const dXcG=.12*(p.Xcm-s.Xc)*nucBoost, dXcD=.08*Math.pow(1-s.m,2);
     const Xc_u=cl(s.Xc+dXcG-dXcD+sg*randn()*.012,0,p.Xcm);
     const Ci_u=cl(s.Ci+a.kcont*(1-s.Ci)*(1+sg*randn()*.25));
     const sU={m:m_u,Xc:Xc_u,Ci:Ci_u};
